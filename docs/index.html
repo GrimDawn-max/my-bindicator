@@ -1,87 +1,45 @@
 <!doctype html>
 <html lang="en">
+
 <head>
     <!-- Reload the page every X amount of seconds, in case the app crashes lol -->
     <meta http-equiv="refresh" content="3600">
+
+
     <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" />
-    <meta name="apple-mobile-web-app-capable" content="yes">
-    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>Bindicator</title>
+
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"
         crossorigin="anonymous"></script>
-    <link data-trunk href="./weather-icons-master/font/weather-icons.min.css" rel="css" data-target-path="font">
-    <link data-trunk href="./weather-icons-master/font" rel="copy-dir">
+
+    <link rel="stylesheet" href="/my-bindicator/font/weather-icons.min-eae1f0f5453ebb22.css" integrity="sha384-8ioow4WaFbARExkpndAd5R4b//QLKDDHmz9yjO71m1D7+2vEb3nbPssEfRK1qKud"/>
+    
+
     <script src="https://cdn.jsdelivr.net/npm/echarts@5.4.2/dist/echarts.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/echarts-gl@2.0.9/dist/echarts-gl.min.js"></script>
-</head>
+<link rel="modulepreload" href="/my-bindicator/bindicator-350efbc0cb97af6b.js" crossorigin="anonymous" integrity="sha384-1ljmp4ENFwyd9eqNr9tqlXmNiFRM4ZFvuUGFQgE2TTSCsZO+u3uoYmIlrQf1+BgB"><link rel="preload" href="/my-bindicator/bindicator-350efbc0cb97af6b_bg.wasm" crossorigin="anonymous" integrity="sha384-hL+qFhF9nsMBqjflmR8APo6nbIR+wnCpHjoKYYHGDRcYN7kQ+1eymFPu/YiWmqrp" as="fetch" type="application/wasm"></head>
 <style>
     html,
     body,
     #app {
         height: 100%;
         cursor: none;
-        overflow: hidden;
-    }
-
-    /* Responsive adjustments for mobile devices */
-    @media screen and (max-width: 932px) {
-        /* iPhone 15 Pro Max landscape is 932x430 */
-        /* iPhone 15 Pro landscape is 852x393 */
-        
-        #app {
-            font-size: 14px;
-            padding: 0.5rem !important;
-        }
-        
-        /* Scale down bin icons */
-        svg {
-            height: 50px !important;
-            width: auto !important;
-        }
-        
-        /* Adjust bin day text */
-        .fs-1 {
-            font-size: 1.2rem !important;
-        }
-        
-        /* Scale down weather chart */
-        #chart {
-            width: 100% !important;
-            max-width: 800px !important;
-            height: 120px !important;
-        }
-        
-        /* Make daily weather cards smaller */
-        .card-group .card {
-            font-size: 0.75rem;
-            padding: 0.25rem;
-        }
-        
-        .card-group {
-            gap: 0.25rem;
-        }
-    }
-    
-    @media screen and (max-width: 430px) {
-        /* Portrait mode adjustments */
-        #app {
-            font-size: 12px;
-        }
-        
-        svg {
-            height: 40px !important;
-        }
-        
-        .fs-1 {
-            font-size: 1rem !important;
-        }
-        
-        #chart {
-            height: 100px !important;
-        }
     }
 </style>
-<body data-bs-theme='dark'></body>
+
+<body data-bs-theme='dark'>
+<script type="module">
+import init, * as bindings from '/my-bindicator/bindicator-350efbc0cb97af6b.js';
+const wasm = await init({ module_or_path: '/my-bindicator/bindicator-350efbc0cb97af6b_bg.wasm' });
+
+
+window.wasmBindings = bindings;
+
+
+dispatchEvent(new CustomEvent("TrunkApplicationStarted", {detail: {wasm}}));
+
+</script></body>
+
 </html>
