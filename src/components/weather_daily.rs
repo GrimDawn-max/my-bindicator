@@ -1,5 +1,6 @@
 use chrono::{DateTime, Local};
 use yew::{function_component, html, Html, Properties};
+use gloo_console::log;
 
 #[derive(Clone, PartialEq, Properties)]
 pub struct DailyComponentProps {
@@ -12,9 +13,11 @@ pub struct DailyComponentProps {
     pub sunrise: DateTime<Local>,
     pub sunset: DateTime<Local>,
 }
-
 #[function_component]
 pub fn DailyComponent(props: &DailyComponentProps) -> Html {
+    let day_name = format!("{}", props.date.format("%a"));
+    log!(format!("DailyComponent rendering: date={}, day={}", props.date, day_name));
+    
     html! {
     <div class="card">
         <div class="card-header text-center p-0 text-white">
@@ -37,12 +40,10 @@ pub fn DailyComponent(props: &DailyComponentProps) -> Html {
     </div>
     }
 }
-
 #[derive(Clone, PartialEq, Properties)]
 struct CodeIconProps {
     code: i32,
 }
-
 #[function_component]
 fn CodeIconComponent(props: &CodeIconProps) -> Html {
     let class = match props.code {
@@ -61,7 +62,6 @@ fn CodeIconComponent(props: &CodeIconProps) -> Html {
         95 => "wi-day-thunderstorm",
         _ => "wi-meteor", // he-he-he-he
     };
-
     let icon_class = format!("wi {} text-white", class);
     html! {
         <div class="display-3">
