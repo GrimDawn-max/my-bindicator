@@ -58,8 +58,8 @@ pub fn LocationProvider(props: &LocationProviderProps) -> Html {
     });
 
     let location_clone = location.clone();
-    use_effect_with(location.clone(), move |_| {
-        // Only get location once, not sure why I need these checks
+    use_effect_with(location.coordinates.clone(), move |_| {
+        // Only get location once
         if location_clone.coordinates.latitude != 0.0 {
             return;
         }
