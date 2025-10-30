@@ -5,7 +5,7 @@ use crate::{
     },
     context::weather::WeatherContext,
 };
-use chrono::{DateTime, Local, TimeZone};
+use chrono::{DateTime, Local};
 use yew::prelude::*;
 
 #[function_component]
@@ -39,61 +39,69 @@ pub fn WeatherComponent() -> Html {
         format!("{:03}:00", offset_sec)
     };
 
-    // Find index for today
+    // Find index of today or first future day
     let today_index = weather.daily.time.iter().position(|time| {
-        let dt = DateTime::parse_from_rfc3339(&format!("{time}T00:00:00{offset_hours}")).ok();
-        dt.map_or(false, |d| d.with_timezone(&Local).date_naive() >= Local::now().date_naive())
+        let date = DateTime::parse_from_rfc3339(&format!("{}T00:00:00{offset_hours}", time));
+        date.map_or(false, |dt| dt.date_naive() >= Local::now().date_naive())
     }).unwrap_or(0);
 
-    // Rotate daily arrays so they start from today
-    let rotate = |v: Vec<_>| {
-        let mut v = v;
-        v.rotate_left(today_index);
-        v.into_iter().take(7).collect::<Vec<_>>()
-    };
-
-    let daily_times = rotate(weather.daily.time.clone());
-    let daily_max = rotate(weather.daily.temperature_2m_max.clone());
-    let daily_min = rotate(weather.daily.temperature_2m_min.clone());
-    let daily_precip = rotate(weather.daily.precipitation_sum.clone());
-    let daily_precip_prob = rotate(weather.daily.precipitation_probability_max.clone());
-    let daily_code = rotate(weather.daily.weather_code.clone());
-    let daily_sunrise = rotate(weather.daily.sunrise.clone());
-    let daily_sunset = rotate(weather.daily.sunset.clone());
+    // Slice arrays from today onward
+    let daily_times = &weather.daily.time[today_index..];
+    let daily_temp_max = &weather.daily.temperature_2m_max[today_index..];
+    let daily_temp_min = &weather.daily.temperature_2m_min[today_index..];
+    let daily_precip_sum = &weather.daily.precipitation_sum[today_index..];
+    let daily_precip_prob = &weather.daily.precipitation_probability_max[today_index..];
+    let daily_weather_code = &weather.daily.weather_code[today_index..];
+    let daily_sunrise = &weather.daily.sunrise[today_index..];
+    let daily_sunset = &weather.daily.sunset[today_index..];
 
     html! {
         <>
             <HourlyComponent data={weather.hourly.clone()} offset_hours={offset_hours.clone()} />
             <div class="card-group text-dark mt-3">
-                { for (0..7).map(|i| {
-                    let date_utc = DateTime::parse_from_rfc3339(&format!("{}T00:00:00{offset_hours}", daily_times[i])).ok();
-                    let local_date = date_utc.map(|d| d.with_timezone(&Local));
-                    let weekday_label = local_date.map(|d| d.format("%a").to_string()).unwrap_or_else(|| "?".to_string());
+            {
+                daily_times.iter().enumerate()
+                    .take(7) // Only 7 days
+                    .map(|(i, time)| {
+                        let temp_max = daily_temp_max[i];
+                        let temp_min = daily_temp_min[i];
+                        let precipitation = daily_precip_sum[i];
+                        let precipitation_probability_max = daily_precip_prob[i];
+                        let code = daily_weather_code[i];
 
-                    let sunrise = DateTime::parse_from_rfc3339(&format!("{}:00{offset_hours}", daily_sunrise[i]));
-                    let sunset = DateTime::parse_from_rfc3339(&format!("{}:00{offset_hours}", daily_sunset[i]));
+                        let date_utc = DateTime::parse_from_rfc3339(&format!("{time}T00:00:00{offset_hours}")).ok();
+                        let local_date = date_utc.map(|d| d.with_timezone(&Local));
 
-                    if let (Some(local_dt), Ok(sr), Ok(ss)) = (local_date, sunrise, sunset) {
-                        let props = DailyComponentProps {
-                            weather_code: daily_code[i].to_owned(),
-                            temp_max: daily_max[i].to_owned(),
-                            temp_min: daily_min[i].to_owned(),
-                            precipitation_sum: daily_precip[i].to_owned(),
-                            precipitation_probability_max: daily_precip_prob[i].to_owned(),
-                            date: local_dt.into(),
-                            sunrise: sr.into(),
-                            sunset: ss.into(),
-                        };
-                        html! {
-                            <div class="text-center">
-                                <p class="fw-bold mb-0">{ weekday_label }</p>
-                                <DailyComponent ..props.clone() />
-                            </div>
+                        let weekday_label = local_date
+                            .map(|d| d.format("%a").to_string())
+                            .unwrap_or_else(|| "?".to_string());
+
+                        let sunrise = DateTime::parse_from_rfc3339(&format!("{}:00{offset_hours}", daily_sunrise[i]));
+                        let sunset = DateTime::parse_from_rfc3339(&format!("{}:00{offset_hours}", daily_sunset[i]));
+
+                        if let (Some(local_dt), Ok(sr), Ok(ss)) = (local_date, sunrise, sunset) {
+                            let props = DailyComponentProps {
+                                weather_code: code.to_owned(),
+                                temp_max: temp_max.to_owned(),
+                                temp_min: temp_min.to_owned(),
+                                precipitation_sum: precipitation.to_owned(),
+                                precipitation_probability_max: precipitation_probability_max.to_owned(),
+                                date: local_dt.into(),
+                                sunrise: sr.into(),
+                                sunset: ss.into(),
+                            };
+                            html! {
+                                <div class="text-center">
+                                    <p class="fw-bold mb-0">{ weekday_label }</p>
+                                    <DailyComponent ..props.clone() />
+                                </div>
+                            }
+                        } else {
+                            html! {}
                         }
-                    } else {
-                        html! {}
-                    }
-                }) }
+                    })
+                    .collect::<Html>()
+            }
             </div>
         </>
     }
