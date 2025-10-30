@@ -2,7 +2,7 @@
 
 Bare bones WASM application written in Rust + Yew that indicates which bins are getting picked up
 
-Accessible via https://rsov.github.io/bindicator/
+Accessible via https://GrimDawn-max.github.io/my-bindicator/
 
 Designed to be shown on 800x480 screen
 
