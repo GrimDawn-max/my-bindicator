@@ -1,22 +1,18 @@
 <!doctype html>
 <html lang="en">
-
 <head>
     <!-- Reload the page every X amount of seconds, in case the app crashes lol -->
     <meta http-equiv="refresh" content="3600">
-
-
     <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" />
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <title>Bindicator</title>
-
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"
         crossorigin="anonymous"></script>
-
     <link data-trunk href="./weather-icons-master/font/weather-icons.min.css" rel="css" data-target-path="font">
     <link data-trunk href="./weather-icons-master/font" rel="copy-dir">
-
     <script src="https://cdn.jsdelivr.net/npm/echarts@5.4.2/dist/echarts.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/echarts-gl@2.0.9/dist/echarts-gl.min.js"></script>
 </head>
@@ -27,8 +23,138 @@
         height: 100%;
         cursor: none;
     }
+
+    /* Desktop/tablet - default styling */
+    @media screen and (min-width: 933px) {
+        #app {
+            overflow: hidden;
+        }
+    }
+
+    /* iPhone 15 Pro Max landscape (932 x 430) and iPhone 15 Pro landscape (852 x 393) */
+    @media screen and (max-width: 932px) and (orientation: landscape) {
+        #app {
+            font-size: 11px !important;
+            padding: 0.25rem !important;
+            overflow: hidden;
+        }
+        
+        /* Bin icons - much smaller */
+        svg {
+            height: 35px !important;
+            width: auto !important;
+        }
+        
+        /* Christmas tree emoji */
+        .fs-1 {
+            font-size: 0.9rem !important;
+        }
+        
+        /* Bin day text */
+        .fw-bold.text-white {
+            font-size: 0.9rem !important;
+        }
+        
+        /* Weather chart - smaller */
+        #chart {
+            width: 100% !important;
+            max-width: 900px !important;
+            height: 90px !important;
+            margin: 0 auto !important;
+        }
+        
+        /* Daily weather cards - much more compact */
+        .card-group {
+            gap: 0.15rem !important;
+            margin-top: 0.5rem !important;
+        }
+        
+        .card {
+            font-size: 0.6rem !important;
+            min-width: 0 !important;
+        }
+        
+        .card-header {
+            padding: 0.1rem !important;
+            font-size: 0.65rem !important;
+        }
+        
+        .card-body {
+            padding: 0.2rem !important;
+            gap: 0.1rem !important;
+        }
+        
+        /* Weather icons in cards */
+        .card-body .display-3 {
+            font-size: 1.2rem !important;
+        }
+        
+        .card-body .wi {
+            font-size: 1.2rem !important;
+        }
+        
+        /* Temperature text */
+        .card-body .fs-5 {
+            font-size: 0.65rem !important;
+        }
+        
+        /* Sunrise/sunset and precipitation */
+        .card-body .fw-bold {
+            font-size: 0.55rem !important;
+        }
+    }
+    
+    /* Portrait mode - allow scrolling */
+    @media screen and (max-width: 430px) and (orientation: portrait) {
+        html, body {
+            overflow-y: auto !important;
+            height: auto !important;
+        }
+        
+        #app {
+            height: auto !important;
+            min-height: 100vh;
+            overflow-y: visible !important;
+            font-size: 12px;
+            padding: 0.5rem !important;
+        }
+        
+        /* Stack bins and clock vertically */
+        #app > div:nth-child(2) {
+            flex-direction: column !important;
+            gap: 0.5rem;
+        }
+        
+        /* Bin icons */
+        svg {
+            height: 50px !important;
+        }
+        
+        .fs-1 {
+            font-size: 1.2rem !important;
+        }
+        
+        /* Weather chart */
+        #chart {
+            width: 100% !important;
+            height: 150px !important;
+        }
+        
+        /* Daily cards - allow wrapping */
+        .card-group {
+            display: grid !important;
+            grid-template-columns: repeat(auto-fit, minmax(80px, 1fr)) !important;
+            gap: 0.5rem !important;
+        }
+        
+        .card {
+            font-size: 0.75rem !important;
+        }
+        
+        .card-body .display-3 {
+            font-size: 1.5rem !important;
+        }
+    }
 </style>
-
 <body data-bs-theme='dark'></body>
-
 </html>
