@@ -139,18 +139,19 @@
         
         /* Weather chart - proper sizing to show full legend without cutoff */
         #chart {
-            width: 70% !important;
-            max-width: 70% !important;
+            width: 95% !important;
+            max-width: 95% !important;
             height: 240px !important;
-            margin: 0.5rem 15% 1rem 15% !important;
+            margin: 0.5rem 0 1rem 0 !important;
+            margin-left: 0 !important;
         }
         
-        /* Daily cards - allow wrapping with minimal top spacing (moving cards up) */
+        /* Daily cards - allow wrapping with negative margin to bring cards up substantially */
         .card-group {
             display: grid !important;
             grid-template-columns: repeat(auto-fit, minmax(80px, 1fr)) !important;
             gap: 0.5rem !important;
-            margin-top: -0.5rem !important;
+            margin-top: -2rem !important;
         }
         
         .card {
