@@ -55,18 +55,18 @@
             font-size: 0.9rem !important;
         }
         
-        /* Weather chart - smaller */
+        /* Weather chart - increased height and added bottom margin */
         #chart {
             width: 100% !important;
             max-width: 900px !important;
-            height: 90px !important;
-            margin: 0 auto !important;
+            height: 110px !important;
+            margin: 0 auto 0.75rem auto !important;
         }
         
-        /* Daily weather cards - much more compact */
+        /* Daily weather cards - more compact with more top spacing */
         .card-group {
             gap: 0.15rem !important;
-            margin-top: 0.5rem !important;
+            margin-top: 1rem !important;
         }
         
         .card {
@@ -134,17 +134,19 @@
             font-size: 1.2rem !important;
         }
         
-        /* Weather chart */
+        /* Weather chart - increased height and added bottom margin to show legend and times */
         #chart {
             width: 100% !important;
-            height: 150px !important;
+            height: 200px !important;
+            margin-bottom: 1rem !important;
         }
         
-        /* Daily cards - allow wrapping */
+        /* Daily cards - allow wrapping with more top spacing */
         .card-group {
             display: grid !important;
             grid-template-columns: repeat(auto-fit, minmax(80px, 1fr)) !important;
             gap: 0.5rem !important;
+            margin-top: 1rem !important;
         }
         
         .card {
