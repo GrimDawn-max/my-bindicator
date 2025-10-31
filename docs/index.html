@@ -60,13 +60,13 @@
             width: 100% !important;
             max-width: 900px !important;
             height: 120px !important;
-            margin: 0 auto 1.5rem auto !important;
+            margin: 0 auto 2.5rem auto !important;
         }
         
-        /* Daily weather cards - more compact with more top spacing */
+        /* Daily weather cards - more compact with much more top spacing to prevent overlap */
         .card-group {
             gap: 0.15rem !important;
-            margin-top: 1.5rem !important;
+            margin-top: 2.5rem !important;
         }
         
         .card {
@@ -115,8 +115,9 @@
             height: auto !important;
             min-height: 100vh;
             overflow-y: visible !important;
+            overflow-x: hidden !important;
             font-size: 12px;
-            padding: 0.5rem !important;
+            padding: 0.5rem 0.75rem !important;
         }
         
         /* Stack bins and clock vertically */
@@ -135,11 +136,13 @@
             font-size: 1.2rem !important;
         }
         
-        /* Weather chart - significantly increased height to show full legend and added margins */
+        /* Weather chart - significantly increased height to show full legend and proper margins */
         #chart {
-            width: 100% !important;
+            width: calc(100% - 1rem) !important;
+            max-width: 100% !important;
             height: 240px !important;
-            margin: 0.5rem auto 1.5rem auto !important;
+            margin: 0.5rem 0.5rem 1.5rem 0.5rem !important;
+            padding-right: 0.5rem !important;
         }
         
         /* Daily cards - allow wrapping with more top spacing */
