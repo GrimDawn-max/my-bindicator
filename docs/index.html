@@ -4,211 +4,168 @@
     <!-- Reload the page every X amount of seconds, in case the app crashes lol -->
     <meta http-equiv="refresh" content="3600">
     <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" />
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <title>Bindicator</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"
         crossorigin="anonymous"></script>
-    <link data-trunk href="./weather-icons-master/font/weather-icons.min.css" rel="css" data-target-path="font">
-    <link data-trunk href="./weather-icons-master/font" rel="copy-dir">
+    <link rel="stylesheet" href="/font/weather-icons.min-eae1f0f5453ebb22.css" integrity="sha384-8ioow4WaFbARExkpndAd5R4b//QLKDDHmz9yjO71m1D7+2vEb3nbPssEfRK1qKud"/>
+    
     <script src="https://cdn.jsdelivr.net/npm/echarts@5.4.2/dist/echarts.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/echarts-gl@2.0.9/dist/echarts-gl.min.js"></script>
-</head>
+<link rel="modulepreload" href="/bindicator-8c47d947d434b659.js" crossorigin="anonymous" integrity="sha384-eJUVTAvlT/lvBuUAE+dgQ65juiK8e4fWFVkXMICexMMu2sflJfJi5QugK76m6EF3"><link rel="preload" href="/bindicator-8c47d947d434b659_bg.wasm" crossorigin="anonymous" integrity="sha384-Jr5CHrEGRlBIyfQFh9FtKEzieha921GVcjKo/mgwd184fPfjegagH0mr3vqyW6gi" as="fetch" type="application/wasm"></head>
 <style>
-    /* Default desktop styling */
     html,
-    body {
-        height: 100%;
-        margin: 0;
-        padding: 0;
-    }
-    
+    body,
     #app {
         height: 100%;
         cursor: none;
-        overflow: hidden;
+    }
+
+    /* Desktop/tablet - default styling */
+    @media screen and (min-width: 933px) {
+        #app {
+            overflow: hidden;
+        }
     }
 
     /* iPhone 15 Pro Max landscape (932 x 430) and iPhone 15 Pro landscape (852 x 393) */
     @media screen and (max-width: 932px) and (orientation: landscape) {
         #app {
-            font-size: 10px !important;
-            padding: 0.2rem 0.3rem !important;
-            overflow: hidden !important;
-            display: flex !important;
-            flex-direction: column !important;
-            justify-content: space-between !important;
+            font-size: 11px !important;
+            padding: 0.25rem !important;
+            overflow: hidden;
         }
         
-        /* Top section with bins and clock - more compact */
-        #app > div:nth-child(2) {
-            margin-bottom: 0.2rem !important;
-        }
-        
-        /* Bin icons - smaller */
+        /* Bin icons - much smaller */
         svg {
-            height: 30px !important;
+            height: 35px !important;
             width: auto !important;
         }
         
-        /* Christmas tree and bin text */
+        /* Christmas tree emoji */
         .fs-1 {
-            font-size: 0.75rem !important;
-            margin-left: 5px !important;
+            font-size: 0.9rem !important;
         }
         
-        /* Weather chart - very compact */
+        /* Bin day text */
+        .fw-bold.text-white {
+            font-size: 0.9rem !important;
+        }
+        
+        /* Weather chart - smaller */
         #chart {
             width: 100% !important;
             max-width: 900px !important;
-            height: 70px !important;
+            height: 90px !important;
             margin: 0 auto !important;
         }
         
-        /* Daily weather cards - extremely compact */
+        /* Daily weather cards - much more compact */
         .card-group {
-            gap: 0.1rem !important;
-            margin-top: 0.3rem !important;
-            flex-wrap: nowrap !important;
+            gap: 0.15rem !important;
+            margin-top: 0.5rem !important;
         }
         
         .card {
-            font-size: 0.5rem !important;
+            font-size: 0.6rem !important;
             min-width: 0 !important;
-            flex: 1 1 0 !important;
         }
         
         .card-header {
-            padding: 0.05rem !important;
-            font-size: 0.6rem !important;
-            line-height: 1.1 !important;
+            padding: 0.1rem !important;
+            font-size: 0.65rem !important;
         }
         
         .card-body {
-            padding: 0.15rem 0.1rem !important;
-            gap: 0.05rem !important;
-            display: flex !important;
-            flex-direction: column !important;
-            align-items: center !important;
+            padding: 0.2rem !important;
+            gap: 0.1rem !important;
         }
         
         /* Weather icons in cards */
         .card-body .display-3 {
-            font-size: 1rem !important;
-            line-height: 1 !important;
-            margin: 0 !important;
+            font-size: 1.2rem !important;
         }
         
         .card-body .wi {
-            font-size: 1rem !important;
+            font-size: 1.2rem !important;
         }
         
         /* Temperature text */
-        .card-body .fs-5,
-        .card-body .text-nowrap {
-            font-size: 0.55rem !important;
-            line-height: 1.1 !important;
-            white-space: nowrap !important;
+        .card-body .fs-5 {
+            font-size: 0.65rem !important;
         }
         
         /* Sunrise/sunset and precipitation */
         .card-body .fw-bold {
-            font-size: 0.5rem !important;
-            line-height: 1.1 !important;
-            white-space: nowrap !important;
-        }
-        
-        /* Remove extra margins/paddings */
-        .mt-3 {
-            margin-top: 0.3rem !important;
-        }
-        
-        .p-0 {
-            padding: 0.05rem !important;
-        }
-        
-        .gap-1 {
-            gap: 0.05rem !important;
+            font-size: 0.55rem !important;
         }
     }
     
-    /* Portrait mode - enable scrolling */
+    /* Portrait mode - allow scrolling */
     @media screen and (max-width: 430px) and (orientation: portrait) {
-        html {
-            overflow-y: scroll !important;
-            -webkit-overflow-scrolling: touch !important;
-        }
-        
-        body {
-            overflow-y: scroll !important;
+        html, body {
+            overflow-y: auto !important;
             height: auto !important;
-            min-height: 100vh !important;
         }
         
         #app {
             height: auto !important;
-            min-height: 100vh !important;
+            min-height: 100vh;
             overflow-y: visible !important;
-            overflow-x: hidden !important;
-            font-size: 14px !important;
+            font-size: 12px;
             padding: 0.5rem !important;
-            display: block !important;
         }
         
         /* Stack bins and clock vertically */
         #app > div:nth-child(2) {
             flex-direction: column !important;
-            gap: 0.5rem !important;
-            margin-bottom: 1rem !important;
+            gap: 0.5rem;
         }
         
         /* Bin icons */
         svg {
-            height: 60px !important;
+            height: 50px !important;
         }
         
         .fs-1 {
-            font-size: 1.5rem !important;
+            font-size: 1.2rem !important;
         }
         
         /* Weather chart */
         #chart {
             width: 100% !important;
-            height: 180px !important;
-            margin: 1rem 0 !important;
+            height: 150px !important;
         }
         
-        /* Daily cards - grid layout for wrapping */
+        /* Daily cards - allow wrapping */
         .card-group {
             display: grid !important;
-            grid-template-columns: repeat(auto-fit, minmax(100px, 1fr)) !important;
+            grid-template-columns: repeat(auto-fit, minmax(80px, 1fr)) !important;
             gap: 0.5rem !important;
-            margin-top: 1rem !important;
-            margin-bottom: 2rem !important;
         }
         
         .card {
-            font-size: 0.85rem !important;
-        }
-        
-        .card-header {
-            padding: 0.3rem !important;
-        }
-        
-        .card-body {
-            padding: 0.5rem !important;
+            font-size: 0.75rem !important;
         }
         
         .card-body .display-3 {
-            font-size: 2rem !important;
-        }
-        
-        .card-body .fs-5 {
-            font-size: 1rem !important;
+            font-size: 1.5rem !important;
         }
     }
 </style>
-<body data-bs-theme='dark'></body>
+<body data-bs-theme='dark'>
+<script type="module">
+import init, * as bindings from '/bindicator-8c47d947d434b659.js';
+const wasm = await init({ module_or_path: '/bindicator-8c47d947d434b659_bg.wasm' });
+
+
+window.wasmBindings = bindings;
+
+
+dispatchEvent(new CustomEvent("TrunkApplicationStarted", {detail: {wasm}}));
+
+</script></body>
 </html>
