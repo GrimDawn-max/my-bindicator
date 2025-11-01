@@ -23,13 +23,28 @@
     
     <script src="https://cdn.jsdelivr.net/npm/echarts@5.4.2/dist/echarts.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/echarts-gl@2.0.9/dist/echarts-gl.min.js"></script>
-<link rel="modulepreload" href="./bindicator-5e852f3b5e495967.js" crossorigin="anonymous" integrity="sha384-eJUVTAvlT/lvBuUAE+dgQ65juiK8e4fWFVkXMICexMMu2sflJfJi5QugK76m6EF3"><link rel="preload" href="./bindicator-5e852f3b5e495967_bg.wasm" crossorigin="anonymous" integrity="sha384-K7xvNrypr14kxm4jAjL00hi7bSVcCe52bP+sgwjGGcLccbIlzpndX6sVRBHVPAsh" as="fetch" type="application/wasm"></head>
+<link rel="modulepreload" href="./bindicator-9c13eaa87af848e2.js" crossorigin="anonymous" integrity="sha384-eJUVTAvlT/lvBuUAE+dgQ65juiK8e4fWFVkXMICexMMu2sflJfJi5QugK76m6EF3"><link rel="preload" href="./bindicator-9c13eaa87af848e2_bg.wasm" crossorigin="anonymous" integrity="sha384-C4Iev3ZObvrjUZw3ekBICJjZ0kjPbUqtrEMeKjVNl7yOFutbvhRAOeVPlkQa9SQc" as="fetch" type="application/wasm"></head>
 <style>
     html,
     body,
     #app {
         height: 100%;
         cursor: none;
+    }
+
+    /* Aggressive CSS to remove any borders from bin images */
+    img[alt*="Bin"], img[alt*="Tree"] {
+        border: none !important;
+        outline: none !important;
+        box-shadow: none !important;
+        background: none !important;
+        background-color: transparent !important;
+        padding: 0 !important;
+        margin-right: 5px;
+        display: inline-block;
+        vertical-align: middle;
+        image-rendering: -webkit-optimize-contrast;
+        image-rendering: crisp-edges;
     }
 
     /* Desktop/tablet - default styling */
@@ -182,8 +197,8 @@
 </style>
 <body data-bs-theme='dark'>
 <script type="module">
-import init, * as bindings from './bindicator-5e852f3b5e495967.js';
-const wasm = await init({ module_or_path: './bindicator-5e852f3b5e495967_bg.wasm' });
+import init, * as bindings from './bindicator-9c13eaa87af848e2.js';
+const wasm = await init({ module_or_path: './bindicator-9c13eaa87af848e2_bg.wasm' });
 
 
 window.wasmBindings = bindings;

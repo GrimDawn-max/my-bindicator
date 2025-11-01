@@ -32,6 +32,21 @@
         cursor: none;
     }
 
+    /* Aggressive CSS to remove any borders from bin images */
+    img[alt*="Bin"], img[alt*="Tree"] {
+        border: none !important;
+        outline: none !important;
+        box-shadow: none !important;
+        background: none !important;
+        background-color: transparent !important;
+        padding: 0 !important;
+        margin-right: 5px;
+        display: inline-block;
+        vertical-align: middle;
+        image-rendering: -webkit-optimize-contrast;
+        image-rendering: crisp-edges;
+    }
+
     /* Desktop/tablet - default styling */
     @media screen and (min-width: 933px) {
         #app {
