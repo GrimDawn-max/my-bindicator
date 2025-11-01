@@ -1,6 +1,7 @@
 [build]
 target = "index.html"
 dist = "docs"
+public_url = "./"
 
 [serve]
 # The address to serve on LAN.
