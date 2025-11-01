@@ -13,6 +13,14 @@
         crossorigin="anonymous"></script>
     <link data-trunk href="./weather-icons-master/font/weather-icons.min.css" rel="css" data-target-path="font">
     <link data-trunk href="./weather-icons-master/font" rel="copy-dir">
+    
+    <!-- Bin icon PNG files - Tell Trunk to copy these -->
+    <link data-trunk rel="copy-file" href="public/BlueBin.png" />
+    <link data-trunk rel="copy-file" href="public/Christmastree.png" />
+    <link data-trunk rel="copy-file" href="public/GarbageBin.png" />
+    <link data-trunk rel="copy-file" href="public/GreenBin.png" />
+    <link data-trunk rel="copy-file" href="public/YardWaste.png" />
+    
     <script src="https://cdn.jsdelivr.net/npm/echarts@5.4.2/dist/echarts.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/echarts-gl@2.0.9/dist/echarts-gl.min.js"></script>
 </head>
@@ -39,8 +47,8 @@
             overflow: hidden;
         }
         
-        /* Bin icons - much smaller */
-        svg {
+        /* Bin icons - much smaller - UPDATED for img tags */
+        img[alt*="Bin"], img[alt*="Tree"] {
             height: 35px !important;
             width: auto !important;
         }
@@ -125,8 +133,8 @@
             gap: 0.5rem;
         }
         
-        /* Bin icons */
-        svg {
+        /* Bin icons - UPDATED for img tags */
+        img[alt*="Bin"], img[alt*="Tree"] {
             height: 50px !important;
         }
         

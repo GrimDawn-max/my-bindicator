@@ -113,27 +113,27 @@ impl Component for BinComponent {
         html! {
             <div class="d-flex align-items-center">
                 // Only Green bin is always displayed
-                <BinImage src="./images/GreenBin.png" alt="Green Bin" />
+                <BinImage src="GreenBin.png" alt="Green Bin" />
 
                 // Alternating Blue vs Black and Brown bins
                 {
                     match get_alternate_bin() {
                         BinVariation::Yellow => html! { 
                             <> 
-                                <BinImage src="./images/GarbageBin.png" alt="Garbage Bin" />
+                                <BinImage src="GarbageBin.png" alt="Garbage Bin" />
                                 // Brown bin only shown during yard waste season
                                 if show_brown_bin {
-                                    <BinImage src="./images/YardWaste.png" alt="Yard Waste" />
+                                    <BinImage src="YardWaste.png" alt="Yard Waste" />
                                 }
                             </> 
                         },
-                        BinVariation::None => html! { <BinImage src="./images/BlueBin.png" alt="Blue Bin" /> }
+                        BinVariation::None => html! { <BinImage src="BlueBin.png" alt="Blue Bin" /> }
                     }
                 }
 
                 // Christmas tree icon during collection period
                 if show_christmas_tree {
-                    <BinImage src="./images/Christmastree.png" alt="Christmas Tree" />
+                    <BinImage src="Christmastree.png" alt="Christmas Tree" />
                 }
 
                 <div class="fs-1 fw-bold text-white">
