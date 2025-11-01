@@ -64,18 +64,18 @@
             font-size: 0.9rem !important;
         }
         
-        /* Weather chart - smaller */
+        /* Weather chart - increased height and much more bottom margin to prevent overlap */
         #chart {
             width: 100% !important;
             max-width: 900px !important;
-            height: 90px !important;
-            margin: 0 auto !important;
+            height: 120px !important;
+            margin: 0 auto 5rem auto !important;
         }
         
-        /* Daily weather cards - much more compact */
+        /* Daily weather cards - more compact with much more top spacing to prevent overlap */
         .card-group {
             gap: 0.15rem !important;
-            margin-top: 0.5rem !important;
+            margin-top: 5rem !important;
         }
         
         .card {
@@ -124,14 +124,16 @@
             height: auto !important;
             min-height: 100vh;
             overflow-y: visible !important;
+            overflow-x: visible !important;
             font-size: 12px;
-            padding: 0.5rem !important;
+            padding: 0.5rem 0.25rem !important;
         }
         
         /* Stack bins and clock vertically */
         #app > div:nth-child(2) {
             flex-direction: column !important;
             gap: 0.5rem;
+            margin-bottom: -1.5rem !important;
         }
         
         /* Bin icons - UPDATED for img tags - SMALLER for portrait */
@@ -145,17 +147,28 @@
             font-size: 1rem !important;
         }
         
-        /* Weather chart */
+        /* Weather chart - proper sizing to show full legend without cutoff */
         #chart {
-            width: 100% !important;
-            height: 150px !important;
+            width: 120% !important;
+            max-width: 120% !important;
+            height: 240px !important;
+            margin: -1rem 0 0.25rem 0 !important;
+            margin-left: 0 !important;
+            overflow: visible !important;
+            transform: scale(0.54) !important;
+            transform-origin: left top !important;
         }
         
-        /* Daily cards - allow wrapping */
+        #chart > div {
+            overflow: visible !important;
+        }
+        
+        /* Daily cards - allow wrapping with negative margin to bring cards up substantially */
         .card-group {
             display: grid !important;
             grid-template-columns: repeat(auto-fit, minmax(80px, 1fr)) !important;
             gap: 0.5rem !important;
+            margin-top: -4rem !important;
         }
         
         .card {
