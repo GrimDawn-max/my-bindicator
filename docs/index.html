@@ -11,7 +11,7 @@
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"
         crossorigin="anonymous"></script>
-    <link rel="stylesheet" href="./font/weather-icons.min-eae1f0f5453ebb22.css" integrity="sha384-8ioow4WaFbARExkpndAd5R4b//QLKDDHmz9yjO71m1D7+2vEb3nbPssEfRK1qKud"/>
+    <link rel="stylesheet" href="/bindicator/font/weather-icons.min-eae1f0f5453ebb22.css" integrity="sha384-8ioow4WaFbARExkpndAd5R4b//QLKDDHmz9yjO71m1D7+2vEb3nbPssEfRK1qKud"/>
     
     
     <!-- Bin icon PNG files - Tell Trunk to copy these -->
@@ -23,7 +23,7 @@
     
     <script src="https://cdn.jsdelivr.net/npm/echarts@5.4.2/dist/echarts.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/echarts-gl@2.0.9/dist/echarts-gl.min.js"></script>
-<link rel="modulepreload" href="./bindicator-9c13eaa87af848e2.js" crossorigin="anonymous" integrity="sha384-eJUVTAvlT/lvBuUAE+dgQ65juiK8e4fWFVkXMICexMMu2sflJfJi5QugK76m6EF3"><link rel="preload" href="./bindicator-9c13eaa87af848e2_bg.wasm" crossorigin="anonymous" integrity="sha384-C4Iev3ZObvrjUZw3ekBICJjZ0kjPbUqtrEMeKjVNl7yOFutbvhRAOeVPlkQa9SQc" as="fetch" type="application/wasm"></head>
+<link rel="modulepreload" href="/bindicator/bindicator-72f9c3a310022c94.js" crossorigin="anonymous" integrity="sha384-uJIeUDskskhLnSuaKqXiBYc9NaKfi6WHkHlFwwp0I/C8foNUrRoCMDpyC7OgiTas"><link rel="preload" href="/bindicator/bindicator-72f9c3a310022c94_bg.wasm" crossorigin="anonymous" integrity="sha384-GZl5DOrGmLpGzZz1oI9csBrG+X1+iZ+26f4N1PuKxUaN+maYUQm3sTnjee82yovb" as="fetch" type="application/wasm"></head>
 <style>
     html,
     body,
@@ -197,8 +197,8 @@
 </style>
 <body data-bs-theme='dark'>
 <script type="module">
-import init, * as bindings from './bindicator-9c13eaa87af848e2.js';
-const wasm = await init({ module_or_path: './bindicator-9c13eaa87af848e2_bg.wasm' });
+import init, * as bindings from '/bindicator/bindicator-72f9c3a310022c94.js';
+const wasm = await init({ module_or_path: '/bindicator/bindicator-72f9c3a310022c94_bg.wasm' });
 
 
 window.wasmBindings = bindings;
