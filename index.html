@@ -59,13 +59,35 @@
         #app {
             font-size: 11px !important;
             padding: 0.25rem !important;
-            overflow: hidden;
+            overflow-x: hidden !important;
+            overflow-y: auto !important;
         }
         
         /* Allow horizontal scroll for forecast */
         .forecast-grid {
+            display: flex !important;
+            flex-wrap: nowrap !important;
             overflow-x: auto !important;
-            -webkit-overflow-scrolling: touch;
+            overflow-y: hidden !important;
+            -webkit-overflow-scrolling: touch !important;
+            scroll-behavior: smooth !important;
+            gap: 10px !important;
+        }
+        
+        .forecast-day {
+            flex: 0 0 auto !important;
+            min-width: 100px !important;
+            max-width: 100px !important;
+        }
+        
+        /* Make sure carousel items allow scrolling */
+        .carousel-item {
+            overflow-x: visible !important;
+            overflow-y: visible !important;
+        }
+        
+        .forecast-card {
+            overflow: visible !important;
         }
         
         /* Bin icons - much smaller - UPDATED for img tags */
