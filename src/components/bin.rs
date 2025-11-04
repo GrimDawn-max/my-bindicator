@@ -5,6 +5,9 @@ use std::time::Duration;
 use yew::platform::time::interval;
 use yew::{function_component, html, AttrValue, Component, Context, Html, Properties};
 
+// ADD: Import weather types
+use crate::weather::WeatherData;
+
 const REFRESH_HOURS: u64 = 1;
 
 pub enum BinVariation {
@@ -66,6 +69,13 @@ pub fn get_today() -> DateTime<Local> {
     return current;
 }
 
+// ADD: Properties with weather field
+#[derive(Properties, PartialEq)]
+pub struct BinComponentProps {
+    #[prop_or_default]
+    pub weather: Option<WeatherData>,
+}
+
 pub struct BinComponent {
     current_time: DateTime<Local>,
 }
@@ -76,7 +86,7 @@ pub enum BinComponentMsg {
 
 impl Component for BinComponent {
     type Message = BinComponentMsg;
-    type Properties = ();
+    type Properties = BinComponentProps; // CHANGED: from () to BinComponentProps
 
     fn create(ctx: &Context<Self>) -> Self {
         let time_steam =
@@ -98,17 +108,27 @@ impl Component for BinComponent {
         true
     }
 
-    fn view(&self, _ctx: &Context<Self>) -> Html {
+    fn view(&self, ctx: &Context<Self>) -> Html {
         let show_brown_bin = is_yard_waste_season();
         let show_christmas_tree = is_christmas_tree_season();
         
         // Calculate days until pickup
         let days_until_pickup = (3 + 7 - self.current_time.weekday().num_days_from_monday()) % 7;
-        let days_text = if days_until_pickup == 1 {
-            "1 day".to_string()
+        let days_text = if days_until_pickup == 0 {
+            "Today".to_string()
+        } else if days_until_pickup == 1 {
+            "Tomorrow".to_string()
         } else {
             format!("{} days", days_until_pickup)
         };
+        
+        // Get day name for forecast lookup
+        let pickup_date = self.current_time + chrono::Duration::days(days_until_pickup as i64);
+        let day_name = pickup_date.format("%A").to_string(); // "Thursday", "Friday", etc.
+        
+        // Get forecast for pickup day
+        let forecast = ctx.props().weather.as_ref()
+            .and_then(|w| w.get_forecast_for_day(&day_name));
         
         html! {
             <div class="d-flex align-items-center">
@@ -143,6 +163,43 @@ impl Component for BinComponent {
                         {days_text}
                     }
                 </div>
+                
+                // ADD: Weather info display
+                {
+                    if let Some(f) = forecast {
+                        html! {
+                            <div class="ms-3 text-white">
+                                <div class="fs-5">
+                                    {&f.icon}{" "}{&f.summary}
+                                </div>
+                                {if let (Some(high), Some(low)) = (f.high, f.low) {
+                                    html! {
+                                        <div class="fs-6">
+                                            {format!("{}°C / {}°C", high, low)}
+                                        </div>
+                                    }
+                                } else {
+                                    html! {}
+                                }}
+                                {if let Some(pop) = f.pop {
+                                    if pop > 50 {
+                                        html! {
+                                            <div class="fs-6 text-warning">
+                                                {"⚠️ "}{format!("{}% rain", pop)}
+                                            </div>
+                                        }
+                                    } else {
+                                        html! {}
+                                    }
+                                } else {
+                                    html! {}
+                                }}
+                            </div>
+                        }
+                    } else {
+                        html! {}
+                    }
+                }
             </div>
         }
     }
