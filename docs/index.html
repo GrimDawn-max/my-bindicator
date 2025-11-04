@@ -194,6 +194,190 @@
             font-size: 1.5rem !important;
         }
     }
+    
+    /* Weather forecast cards - horizontal layout */
+    .forecast-grid {
+        display: grid;
+        grid-template-columns: repeat(7, 1fr);
+        gap: 10px;
+        overflow-x: auto;
+    }
+    
+    .forecast-day {
+        background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+        padding: 15px 10px;
+        border-radius: 12px;
+        text-align: center;
+        transition: transform 0.2s;
+        min-width: 100px;
+    }
+    
+    .forecast-day:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+    }
+    
+    .forecast-day.today {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+    }
+    
+    .day-name {
+        font-weight: bold;
+        font-size: 0.95em;
+        margin-bottom: 8px;
+    }
+    
+    .weather-icon {
+        font-size: 2.5em;
+        margin: 8px 0;
+    }
+    
+    .forecast-temps {
+        margin: 8px 0;
+    }
+    
+    .temp-high {
+        font-size: 1.2em;
+        font-weight: bold;
+        color: #e74c3c;
+    }
+    
+    .forecast-day.today .temp-high {
+        color: #fff;
+    }
+    
+    .temp-low {
+        font-size: 1em;
+        color: #3498db;
+    }
+    
+    .forecast-day.today .temp-low {
+        color: rgba(255,255,255,0.9);
+    }
+    
+    .pop {
+        font-size: 0.85em;
+        color: #666;
+        margin-top: 5px;
+    }
+    
+    .forecast-day.today .pop {
+        color: rgba(255,255,255,0.8);
+    }
+    
+    .forecast-summary {
+        font-size: 0.8em;
+        color: #777;
+        margin-top: 5px;
+        line-height: 1.2;
+    }
+    
+    .forecast-day.today .forecast-summary {
+        color: rgba(255,255,255,0.9);
+    }
+    
+    /* Weather cards styling */
+    .weather-card, .forecast-card {
+        background: white;
+        border-radius: 20px;
+        padding: 30px;
+        margin-bottom: 20px;
+        box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+    }
+    
+    .section-title {
+        color: #333;
+        margin-bottom: 20px;
+        font-size: 1.5em;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+    }
+    
+    .ec-badge {
+        margin-left: auto;
+        font-size: 1.5em;
+    }
+    
+    /* Current weather styling */
+    .current-weather {
+        display: grid;
+        grid-template-columns: auto 1fr;
+        gap: 30px;
+        align-items: center;
+    }
+    
+    .temp-section {
+        text-align: center;
+    }
+    
+    .temp-display {
+        font-size: 4em;
+        font-weight: 900;
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        background-clip: text;
+        line-height: 1;
+    }
+    
+    .condition-text {
+        font-size: 1.3em;
+        color: #555;
+        margin-top: 10px;
+        font-weight: 500;
+    }
+    
+    .weather-details {
+        display: grid;
+        grid-template-columns: repeat(2, 1fr);
+        gap: 12px;
+    }
+    
+    .detail-item {
+        background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+        padding: 15px;
+        border-radius: 10px;
+        transition: transform 0.2s;
+    }
+    
+    .detail-item:hover {
+        transform: translateY(-3px);
+    }
+    
+    .detail-label {
+        font-size: 0.85em;
+        color: #666;
+        margin-bottom: 3px;
+        font-weight: 600;
+    }
+    
+    .detail-value {
+        font-size: 1.2em;
+        font-weight: bold;
+        color: #333;
+    }
+    
+    /* Mobile responsive for weather */
+    @media (max-width: 768px) {
+        .forecast-grid {
+            grid-template-columns: repeat(auto-fit, minmax(90px, 1fr));
+            gap: 8px;
+        }
+        
+        .current-weather {
+            grid-template-columns: 1fr;
+        }
+        
+        .weather-details {
+            grid-template-columns: 1fr;
+        }
+        
+        .temp-display {
+            font-size: 3em;
+        }
+    }
 </style>
 <body data-bs-theme='dark'>
 <script type="module">
