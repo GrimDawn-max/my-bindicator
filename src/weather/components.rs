@@ -190,7 +190,7 @@ impl WeatherDisplay {
         html! {
             <div class="card forecast-card">
                 <h2 class="section-title">
-                    <span>{"📅"}</span>
+                    // <span>{"📅"}</span> Remove calender icon
                     <span>{"7-Day Forecast"}</span>
                 </h2>
                 
