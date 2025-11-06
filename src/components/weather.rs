@@ -15,7 +15,8 @@ pub fn WeatherComponent() -> Html {
     
     if !weather_ctx.is_loaded {
         return html! {
-            <div class="text-white">
+            // FIX: Changed 'text-white' to 'text-body'
+            <div class="text-body">
                 <p>{"Loading weather data..."}</p>
             </div>
         };
@@ -25,7 +26,8 @@ pub fn WeatherComponent() -> Html {
     
     if weather.hourly.time.is_empty() || weather.daily.time.is_empty() {
         return html! {
-            <div class="text-white">
+            // FIX: Changed 'text-white' to 'text-body'
+            <div class="text-body">
                 <p>{"No weather data available"}</p>
             </div>
         };
@@ -78,7 +80,8 @@ pub fn WeatherComponent() -> Html {
     html! {
         <>
             <HourlyComponent data={weather.hourly.clone()} offset_hours={offset_hours.clone()} />
-            <div class="card-group text-white mt-3">
+            // FIX: Changed 'text-white' to 'text-body' for the main card group container
+            <div class="card-group text-body mt-3">
             {
                 daily_cards.into_iter().map(|(key, props)| {
                     html!{ <DailyComponent key={key} ..props /> }

@@ -156,7 +156,8 @@ impl Component for BinComponent {
                     <BinImage src="Christmastree.png" alt="Christmas Tree" />
                 }
 
-                <div class="fs-1 fw-bold text-white">
+                // FIX: Changed hardcoded 'text-white' to 'text-body' for theme awareness
+                <div class="fs-1 fw-bold text-body"> 
                     if self.current_time.weekday() == Weekday::Thu {
                         {"BIN DAY TODAY!!"}
                     } else {
@@ -168,7 +169,8 @@ impl Component for BinComponent {
                 {
                     if let Some(f) = forecast {
                         html! {
-                            <div class="ms-3 text-white">
+                            // FIX: Changed hardcoded 'text-white' to 'text-body' for theme awareness
+                            <div class="ms-3 text-body">
                                 <div class="fs-5">
                                     {&f.icon}{" "}{&f.summary}
                                 </div>
@@ -184,6 +186,7 @@ impl Component for BinComponent {
                                 {if let Some(pop) = f.pop {
                                     if pop > 50 {
                                         html! {
+                                            // NOTE: 'text-warning' is kept as it's a color meant to stand out regardless of theme.
                                             <div class="fs-6 text-warning">
                                                 {"⚠️ "}{format!("{}% rain", pop)}
                                             </div>

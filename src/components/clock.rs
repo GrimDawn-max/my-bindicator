@@ -17,7 +17,8 @@ pub fn ClockComponent() -> Html {
     }
 
     html! {
-        <div class="fs-1 text-end fw-bold text-white">
+        // FIX: Changed hardcoded 'text-white' to 'text-body' for theme awareness.
+        <div class="fs-1 text-end fw-bold text-body">
             { format!("{}", current_time.format("%d %b %Y")) }
             <br/>
             { format!("{}", current_time.format("%H : %M : %S")) }

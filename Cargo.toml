@@ -8,9 +8,11 @@ edition = "2021"
 charming = { version = "0.6.0", features = ["wasm"] }
 yew = { version = "0.21.0", features = ["csr"] }
 yew-hooks = "0.3.3"
-web-sys = { version = "0.3.77", features = ["HtmlFormElement"] }
 gloo-console = "0.3.0"
 futures = "0.3.31"
+
+# === UPDATED: Web-Sys for Theme Switching ===
+web-sys = { version = "0.3.77", features = ["HtmlFormElement", "Window", "Document", "HtmlElement", "MediaQueryList"] }
 
 # Merged dependencies (combined duplicates with latest versions and all features)
 chrono = { version = "0.4.41", features = ["wasmbind"] }

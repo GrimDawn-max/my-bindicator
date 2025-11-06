@@ -20,19 +20,26 @@ pub fn DailyComponent(props: &DailyComponentProps) -> Html {
     
     html! {
     <div class="card">
-        <div class="card-header text-center p-0 text-white">
+        // FIX: Changed 'text-white' to 'text-body' for the day name
+        <div class="card-header text-center p-0 text-body">
             { format!("{}", props.date.format("%a")) }
         </div>
         <div class="card-body d-flex flex-column align-items-center gap-1 p-0">
             <CodeIconComponent code={props.weather_code} />
-            <div class="text-nowrap text-white fw-bold fs-5">
-                {format!("{:.0} - {:.0}  ºC", props.temp_max, props.temp_min)}
+            
+            // FIX: Changed 'text-white' to 'text-body' for temperature range
+            <div class="text-nowrap text-body fw-bold fs-5">
+                {format!("{:.0} - {:.0} ºC", props.temp_max, props.temp_min)}
             </div>
-            <div class="text-nowrap text-white fw-bold">
+            
+            // FIX: Changed 'text-white' to 'text-body' for sunrise/sunset times
+            <div class="text-nowrap text-body fw-bold">
                 { format!("{} - {}", props.sunrise.format("%H:%M"), props.sunset.format("%H:%M")) }
             </div>
+            
             if props.precipitation_sum > 0.0 {
-                <div class="text-white fw-bold">
+                // FIX: Changed 'text-white' to 'text-body' for precipitation
+                <div class="text-body fw-bold">
                     {format!("{}mm {}%", props.precipitation_sum, props.precipitation_probability_max)}
                 </div>
             }
@@ -62,7 +69,12 @@ fn CodeIconComponent(props: &CodeIconProps) -> Html {
         95 => "wi-day-thunderstorm",
         _ => "wi-meteor", // he-he-he-he
     };
-    let icon_class = format!("wi {} text-white", class);
+    
+    // FIX: Removed hardcoded 'text-white' for the icon class.
+    // The icon will now inherit 'text-body' from its parent chain, 
+    // which is the theme-aware color.
+    let icon_class = format!("wi {}", class); 
+    
     html! {
         <div class="display-3">
             <i class={icon_class}></i>
