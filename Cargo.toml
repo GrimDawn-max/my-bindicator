@@ -22,7 +22,8 @@ gloo-net = { version = "0.6.0", features = ["http"] }
 
 # New dependencies for weather integration
 gloo-storage = "0.3"
-gloo-timers = "0.3"
+gloo-timers = { version = "0.3", features = ["futures"] } # ADDED 'features = ["futures"]'
 roxmltree = "0.19"
 wasm-bindgen-futures = "0.4"
 js-sys = "0.3"
+yew-agent = "0.3.0"

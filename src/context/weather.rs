@@ -1,13 +1,20 @@
 use std::rc::Rc;
 
-use gloo_console::log;
+use gloo_console::{log, warn}; // Added warn
 use serde::Deserialize;
 use yew::{platform::spawn_local, prelude::*};
 use yew_hooks::use_interval;
+use gloo_timers::future::sleep;
+use core::time::Duration; // ADDED: For Duration
 
 use crate::context::location::LocationContext;
 
 use super::{super::utils::fetch, location::Coordinates};
+
+// --- NEW CONSTANTS FOR RETRY LOGIC ---
+const MAX_RETRIES: u8 = 3;
+const RETRY_DELAY_MS: u64 = 2000; // 2 seconds delay between retries
+// ------------------------------------
 
 // Easier to deal with a single 'variable'
 #[derive(Debug, PartialEq, Clone)]
@@ -159,8 +166,26 @@ async fn fetch_weather(coordinates: Coordinates) -> WeatherApiData {
 
     let url = "https://api.open-meteo.com/v1/forecast?".to_string() + &params;
 
-    let data = fetch::<WeatherApiData>(url).await;
-    log!(format!("{:?}", data));
+    // --- RETRY LOGIC IMPLEMENTATION ---
+    for attempt in 0..MAX_RETRIES {
+        let result = fetch::<WeatherApiData>(url.clone()).await; // Clone URL for each attempt
+        log!(format!("Weather fetch attempt {} result: {:?}", attempt + 1, result));
 
-    return data;
+        if result.daily.time.len() > 0 {
+            // Check if the daily data is not empty (a good sign of success)
+            return result; // Success! Return data
+        } else {
+            // Log the error/failure of the attempt
+            warn!(format!("Attempt {} failed (Data empty or network error). Retrying in {}ms...", attempt + 1, RETRY_DELAY_MS));
+            
+            if attempt < MAX_RETRIES - 1 {
+                // Delay only if it's not the last attempt
+                sleep(Duration::from_millis(RETRY_DELAY_MS)).await;
+            }
+        }
+    }
+
+    // After all retries fail, return a default/empty structure
+    warn!("Failed to load weather data after all retries. Returning empty data.");
+    return WeatherApiData::default();
 }
