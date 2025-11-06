@@ -3,6 +3,7 @@
 use gloo_net::http::Request;
 use roxmltree::Document;
 use crate::weather::models::*;
+use gloo_console::{log, warn};
 
 pub struct EnvironmentCanadaClient {
     site_code: String,
@@ -27,7 +28,7 @@ impl EnvironmentCanadaClient {
         // Use allorigins proxy
         let url = format!("https://api.allorigins.win/raw?url={}", base_url);
         
-        gloo_console::log!("Fetching weather from:", &url);
+        log!("Fetching weather from:", &url);
         
         let response = Request::get(&url)
             .send()
@@ -43,7 +44,7 @@ impl EnvironmentCanadaClient {
             .await
             .map_err(|e| format!("Failed to read response: {:?}", e))?;
         
-        gloo_console::log!("Received XML data, parsing...");
+        log!("Received XML data, parsing...");
         
         Self::parse_xml(&xml_text)
     }
@@ -118,7 +119,9 @@ impl EnvironmentCanadaClient {
     }
     
     fn parse_current_from_html(html: &str) -> Result<CurrentConditions, String> {
-        gloo_console::log!("Parsing current conditions from HTML");
+        log!("Parsing current conditions from HTML");
+        
+        // --- Existing Parsers (Temperature, Condition, etc.) ---
         
         // Parse temperature: "<b>Temperature:</b> 8.6&deg;C" or "8.6°C"
         let temp = html
@@ -139,6 +142,7 @@ impl EnvironmentCanadaClient {
             .unwrap_or_else(|| "Unknown".to_string());
         
         // Parse humidity: "<b>Humidity:</b> 65 %<br/>"
+        // Note: Using parse::<u8>() since we updated models.rs to use u8
         let humidity = html
             .split("<b>Humidity:</b>")
             .nth(1)
@@ -179,8 +183,44 @@ impl EnvironmentCanadaClient {
         } else {
             (None, None)
         };
+
+
+        // --- NEW AQHI PARSERS ---
+        // Expected format: Air Quality Health Index: 3 | Low Risk
+        let aqhi_text = html
+            .split("Air Quality Health Index:")
+            .nth(1)
+            .and_then(|s| s.split("<br/>").next());
+
+        let (aqhi_value, aqhi_risk) = if let Some(text) = aqhi_text {
+            let parts: Vec<&str> = text.split('|').collect();
+            let value = parts.get(0)
+                .and_then(|s| s.trim().parse::<u8>().ok());
+            let risk = parts.get(1)
+                .map(|s| s.trim().to_string());
+            (value, risk)
+        } else {
+            (None, None)
+        };
+
+
+        // --- NEW SUN TIMES PARSERS ---
+        // Expected format: Sunrise: 07:44 EDT
+        let sunrise = html
+            .split("Sunrise:")
+            .nth(1)
+            .and_then(|s| s.split("<br/>").next())
+            .map(|s| s.trim().to_string());
+
+        // Expected format: Sunset: 16:51 EST
+        let sunset = html
+            .split("Sunset:")
+            .nth(1)
+            .and_then(|s| s.split("<br/>").next())
+            .map(|s| s.trim().to_string());
         
-        gloo_console::log!("Parsed:", &format!("{}°C, {}", temp, condition));
+        
+        log!("Parsed:", &format!("{}°C, {}", temp, condition));
         
         Ok(CurrentConditions {
             temperature: temp,
@@ -192,10 +232,18 @@ impl EnvironmentCanadaClient {
             wind_direction,
             wind_chill: None,
             humidex: None,
+            
+            // --- POPULATE NEW FIELDS ---
+            aqhi_value,
+            aqhi_risk,
+            sunrise,
+            sunset,
         })
     }
     
+    // ... (parse_forecasts_from_entries remains unchanged)
     fn parse_forecasts_from_entries(entries: &[roxmltree::Node]) -> Vec<DailyForecast> {
+        // ... (function body remains unchanged)
         let mut forecasts = Vec::new();
         let mut current_day: Option<(String, Option<i32>, Option<i32>, String, Option<u32>)> = None;
         

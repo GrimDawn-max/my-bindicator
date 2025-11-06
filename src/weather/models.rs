@@ -2,7 +2,7 @@
 
 use serde::{Deserialize, Serialize};
 
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Default)] // ADDED Default trait for easier context initialization
 pub struct WeatherData {
     pub location: String,
     pub current: CurrentConditions,
@@ -11,20 +11,27 @@ pub struct WeatherData {
     pub last_updated: String,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Default)] // ADDED Default trait
 pub struct CurrentConditions {
     pub temperature: f32,
     pub condition: String,
-    pub humidity: Option<u32>,
+    // Changed to u8 to represent percentage, if u32 was intentional, revert this.
+    pub humidity: Option<u8>, 
     pub pressure: Option<f32>,
     pub visibility: Option<f32>,
     pub wind_speed: Option<u32>,
     pub wind_direction: Option<String>,
     pub wind_chill: Option<f32>,
     pub humidex: Option<f32>,
+
+    // --- NEW FIELDS FOR AQHI AND SUN TIMES ---
+    pub aqhi_value: Option<u8>,
+    pub aqhi_risk: Option<String>,
+    pub sunrise: Option<String>,
+    pub sunset: Option<String>,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Default)] // ADDED Default trait
 pub struct DailyForecast {
     pub day_name: String,
     pub high: Option<i32>,
@@ -34,7 +41,7 @@ pub struct DailyForecast {
     pub icon: String,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Default)] // ADDED Default trait
 pub struct WeatherWarning {
     pub warning_type: String,
     pub priority: String,

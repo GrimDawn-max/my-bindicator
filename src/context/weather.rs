@@ -1,15 +1,19 @@
 use std::rc::Rc;
+use core::time::Duration; // RESTORED: For Duration
+use gloo_timers::future::sleep; // RESTORED: For sleep function
 
-use gloo_console::{log, warn}; // Added warn
+use gloo_console::{log, warn}; 
 use serde::Deserialize;
 use yew::{platform::spawn_local, prelude::*};
 use yew_hooks::use_interval;
-use gloo_timers::future::sleep;
-use core::time::Duration; // ADDED: For Duration
 
-use crate::context::location::LocationContext;
+use crate::{
+    context::location::LocationContext,
+    weather::api::EnvironmentCanadaClient, // ADDED: Import the EC client
+    weather::models::WeatherData, // ADDED: Import the EC WeatherData model
+};
 
-use super::{super::utils::fetch, location::Coordinates};
+use super::location::Coordinates; 
 
 // --- NEW CONSTANTS FOR RETRY LOGIC ---
 const MAX_RETRIES: u8 = 3;
@@ -23,39 +27,9 @@ pub struct WeatherCtx {
     pub weather: WeatherData,
 }
 
-#[derive(Debug, Clone, PartialEq, Deserialize, Default)]
-pub struct WeatherData {
-    pub daily: WeatherDaily,
-    pub hourly: WeatherHourly,
-    pub utc_offset_seconds: i32,
-}
-
-#[derive(Debug, Clone, PartialEq, Deserialize, Default)]
-pub struct WeatherDaily {
-    pub temperature_2m_max: Vec<f32>,
-    pub temperature_2m_min: Vec<f32>,
-    pub time: Vec<String>,
-    pub precipitation_sum: Vec<f32>,
-    pub precipitation_probability_max: Vec<i32>,
-    pub weather_code: Vec<i32>,
-    pub sunrise: Vec<String>,
-    pub sunset: Vec<String>,
-}
-
-#[derive(Debug, Clone, PartialEq, Deserialize, Default)]
-pub struct WeatherHourly {
-    pub temperature_2m: Vec<f32>,
-    pub precipitation: Vec<f32>,
-    pub time: Vec<String>,
-    pub uv_index: Vec<f32>,
-}
-
-#[derive(Debug, Clone, PartialEq, Deserialize, Default)]
-struct WeatherApiData {
-    daily: WeatherDaily,
-    hourly: WeatherHourly,
-    utc_offset_seconds: i32,
-}
+// REMOVED: Open-Meteo data structures (WeatherDaily, WeatherHourly)
+// The correct WeatherData should now come from src/weather/models.rs
+// NOTE: Ensure your src/weather/models.rs contains the WeatherData struct definition.
 
 impl Reducible for WeatherCtx {
     type Action = WeatherData;
@@ -81,56 +55,53 @@ pub struct WeatherProviderProps {
 pub fn WeatherProvider(props: &WeatherProviderProps) -> Html {
     let weather = use_reducer(|| WeatherCtx {
         is_loaded: false,
+        // Since WeatherData now derives Default (in models.rs), this is fine
         weather: WeatherData {
             ..Default::default()
         },
     });
 
-    let location_ctx = use_context::<LocationContext>().unwrap();
+    // location_ctx is not used directly by the EC client, but kept for context
+    let _location_ctx = use_context::<LocationContext>().unwrap(); 
+
+    // --- EC CLIENT SETUP ---
+    let client = EnvironmentCanadaClient::toronto();
+    // -----------------------
 
     let weather_clone = weather.clone();
-    use_effect_with(location_ctx.coordinates.clone(), move |coordinates| {
-        // Wait till we get data
-        if coordinates.latitude == 0.0 {
-            return;
-        }
-
-        let coordinates_clone = coordinates.clone();
+    let client_clone_on_mount = client.clone();
+    
+    // Initial data fetch using use_effect_with(()) to run once on mount
+    use_effect_with((), move |_| {
+        // Run once on component mount
         spawn_local(async move {
-            let data = fetch_weather(coordinates_clone).await;
-            weather_clone.dispatch(WeatherData {
-                daily: data.daily,
-                hourly: data.hourly,
-                utc_offset_seconds: data.utc_offset_seconds,
-            });
+            let data = fetch_weather_with_retry(&client_clone_on_mount).await;
+            weather_clone.dispatch(data);
         });
+        || ()
     });
 
-    let update_every_millis = 1000 * 60 * 60;
-    let coordinates_clone1 = location_ctx.coordinates.clone();
-    let weather_clone1 = weather.clone();
+
+    // Interval logic for hourly updates (uncommented and updated)
+    let update_every_millis = 1000 * 60 * 60; // 1 hour
+    let client_clone_on_interval = client.clone();
+    let weather_clone_on_interval = weather.clone();
+    
     use_interval(
         move || {
-            log!("In use interval");
-            // Wait till we get data
-            if coordinates_clone1.latitude == 0.0 {
-                return;
-            }
-
-            let coordinates_clone2 = coordinates_clone1.clone();
-            let weather_clone2 = weather_clone1.clone();
+            log!("In use interval: Attempting weather refresh.");
+            
+            let client_clone = client_clone_on_interval.clone();
+            let weather_clone = weather_clone_on_interval.clone();
+            
             spawn_local(async move {
-                let data = fetch_weather(coordinates_clone2).await;
-                weather_clone2.dispatch(WeatherData {
-                    daily: data.daily,
-                    hourly: data.hourly,
-                    utc_offset_seconds: data.utc_offset_seconds,
-                });
+                let data = fetch_weather_with_retry(&client_clone).await;
+                weather_clone.dispatch(data);
             });
         },
         update_every_millis,
     );
-
+    
     html! {
         <ContextProvider<WeatherContext> context={weather}>
             {props.children.clone()}
@@ -138,54 +109,44 @@ pub fn WeatherProvider(props: &WeatherProviderProps) -> Html {
     }
 }
 
-async fn fetch_weather(coordinates: Coordinates) -> WeatherApiData {
-    let params = [
-        ["latitude", &coordinates.latitude.to_string()],
-        ["longitude", &coordinates.longitude.to_string()],
-        ["timezone", &"auto".to_string()],
-        [
-            "hourly",
-            &["temperature_2m", "precipitation", "uv_index"].join(","),
-        ],
-        [
-            "daily",
-            &[
-                "weather_code",
-                "sunrise",
-                "sunset",
-                "temperature_2m_max",
-                "temperature_2m_min",
-                "precipitation_sum",
-                "precipitation_probability_max",
-            ]
-            .join(","),
-        ],
-    ]
-    .map(|x| x.join("="))
-    .join("&");
+// --- NEW RETRY IMPLEMENTATION FOR EC CLIENT ---
 
-    let url = "https://api.open-meteo.com/v1/forecast?".to_string() + &params;
-
-    // --- RETRY LOGIC IMPLEMENTATION ---
+/// Attempts to fetch weather data from the Environment Canada client with retries.
+async fn fetch_weather_with_retry(client: &EnvironmentCanadaClient) -> WeatherData {
     for attempt in 0..MAX_RETRIES {
-        let result = fetch::<WeatherApiData>(url.clone()).await; // Clone URL for each attempt
-        log!(format!("Weather fetch attempt {} result: {:?}", attempt + 1, result));
-
-        if result.daily.time.len() > 0 {
-            // Check if the daily data is not empty (a good sign of success)
-            return result; // Success! Return data
-        } else {
-            // Log the error/failure of the attempt
-            warn!(format!("Attempt {} failed (Data empty or network error). Retrying in {}ms...", attempt + 1, RETRY_DELAY_MS));
-            
-            if attempt < MAX_RETRIES - 1 {
-                // Delay only if it's not the last attempt
-                sleep(Duration::from_millis(RETRY_DELAY_MS)).await;
+        let result = client.fetch_weather().await;
+        
+        match result {
+            Ok(data) => {
+                log!(format!("Weather fetch attempt {} succeeded.", attempt + 1));
+                // A successful parse means we got data, but let's check basic validity.
+                if !data.location.is_empty() {
+                    return data; 
+                } else {
+                    warn!(format!("Attempt {} failed (Data empty or invalid structure).", attempt + 1));
+                }
             }
+            Err(e) => {
+                warn!(format!("Attempt {} failed (Network/Parse error: {}).", attempt + 1, e));
+            }
+        }
+        
+        if attempt < MAX_RETRIES - 1 {
+            // Delay only if it's not the last attempt
+            warn!(format!("Retrying in {}ms...", RETRY_DELAY_MS));
+            sleep(Duration::from_millis(RETRY_DELAY_MS)).await;
         }
     }
 
     // After all retries fail, return a default/empty structure
     warn!("Failed to load weather data after all retries. Returning empty data.");
-    return WeatherApiData::default();
+    return WeatherData::default();
 }
+
+
+// The entire Open-Meteo function is commented out (as per previous step).
+/*
+async fn fetch_weather(coordinates: Coordinates) -> WeatherApiData {
+// ... old Open-Meteo logic ...
+}
+*/
