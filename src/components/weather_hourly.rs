@@ -11,10 +11,11 @@ use chrono::{DateTime, Local};
 use yew::{function_component, html, use_effect_with, Html, Properties};
 use gloo_timers::callback::Timeout;
 use gloo_console::log;
-use web_sys::window; // ADDED: Import window for theme preference check
+use web_sys::window;
 
-use crate::context::weather::WeatherHourly;
+use crate::weather::api::WeatherHourly;
 
+#[allow(dead_code)]
 #[derive(Clone, PartialEq, Properties)]
 pub struct HourlyComponentProps {
     pub data: WeatherHourly,

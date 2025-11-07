@@ -1,7 +1,7 @@
 // src/weather/test_data.rs
-
 use crate::weather::models::*;
 
+#[allow(dead_code)] // Useful for testing and development
 pub fn get_mock_weather() -> WeatherData {
     WeatherData {
         location: "Toronto".to_string(),

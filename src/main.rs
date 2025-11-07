@@ -14,7 +14,7 @@ use weather::{WeatherDisplay, WeatherData};
 
 // === NEW IMPORTS FOR THEME SWITCHING ===
 use yew::{function_component, html, use_state, Callback, Html, use_effect_with, hook};
-use web_sys::{window, Document, HtmlElement, MediaQueryList}; 
+use web_sys::{window, MediaQueryList}; 
 
 // === NEW CUSTOM HOOK: use_theme_switcher (Step 2) ===
 #[hook]

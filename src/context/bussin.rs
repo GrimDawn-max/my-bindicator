@@ -12,6 +12,7 @@ pub struct BusCtx {
     pub data: BusData,
 }
 
+#[allow(dead_code)]
 #[derive(Debug, PartialEq, Clone, serde::Serialize, serde::Deserialize, Default)]
 pub struct BusStopsStorage {
     pub bus_stops: Vec<String>,
@@ -61,16 +62,17 @@ pub fn BusProvider(props: &BusProviderProps) -> Html {
 
     // let bus_ctx = use_context::<BusContext>().unwrap();
 
-    let update_every_millis = 1000 * 60 * 60;
+    let _update_every_millis = 1000 * 60 * 60;
+
     use_effect(move || {
         // let stops_to_load = LocalStorage::get::<BusStopsStorage>("bus_stops");
-
         // if stops_to_load.is_err() {
         //     log!("Could not load stops from storage");
         //     return;
         // }
 
         // let stops = stops_to_load.unwrap();
+
         // if stops.bus_stops.len() == 0 {
         //     return;
         // }
@@ -97,7 +99,7 @@ pub fn BusProvider(props: &BusProviderProps) -> Html {
 }
 
 // https://transportnsw.info/api/trip/v1/departure-list-request?name=G12312312&type=stop&depArrMacro=dep&depType=stopEvents&excludedModes=2,9,11,1,4,7
-
+#[allow(dead_code)]
 async fn fetch_departures(stop_number: String) -> Vec<Departure> {
     let params = [
         ["name", &stop_number.to_string()],
@@ -115,10 +117,9 @@ async fn fetch_departures(stop_number: String) -> Vec<Departure> {
     log!(format!("{:?}", response));
 
     let data: Value = serde_json::from_str(&response).unwrap();
-
     let stop_events = data["stopEvents"].as_array().unwrap();
-    let mut departures = Vec::new();
 
+    let mut departures = Vec::new();
     for stop in stop_events {
         departures.push(Departure {
             departure_time: DateTime::parse_from_rfc3339(stop["departureTime"].as_str().unwrap())

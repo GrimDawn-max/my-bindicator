@@ -5,8 +5,7 @@ use std::time::Duration;
 use yew::platform::time::interval;
 use yew::{function_component, html, AttrValue, Component, Context, Html, Properties};
 
-// ADD: Import weather types
-use crate::weather::models::WeatherData; // Adjusted import path for clarity if models is a module
+use crate::weather::models::WeatherData;
 
 const REFRESH_HOURS: u64 = 1;
 
@@ -70,7 +69,6 @@ pub fn get_today() -> DateTime<Local> {
     return current;
 }
 
-// ADD: Properties with weather field
 #[derive(Properties, PartialEq)]
 pub struct BinComponentProps {
     #[prop_or_default]
@@ -131,9 +129,6 @@ impl Component for BinComponent {
         let forecast = ctx.props().weather.as_ref()
             .and_then(|w| w.get_forecast_for_day(&day_name));
         
-        // --- NEW: Current Conditions Data ---
-        let current_weather_data = ctx.props().weather.as_ref();
-        
         html! {
             <div class="d-flex align-items-center">
                 // Only Green bin is always displayed
@@ -160,7 +155,6 @@ impl Component for BinComponent {
                     <BinImage src="Christmastree.png" alt="Christmas Tree" />
                 }
 
-                // FIX: Changed hardcoded 'text-white' to 'text-body' for theme awareness
                 <div class="fs-1 fw-bold text-body"> 
                     if self.current_time.weekday() == Weekday::Thu {
                         {"BIN DAY TODAY!!"}
@@ -169,14 +163,12 @@ impl Component for BinComponent {
                     }
                 </div>
                 
-                // ADD: Weather info display for pickup day forecast
+                // Weather info display for pickup day forecast
                 {
                     if let Some(f) = forecast {
                         html! {
-                            // FIX: Changed hardcoded 'text-white' to 'text-body' for theme awareness
                             <div class="ms-3 text-body">
                                 <div class="fs-5">
-                                    // Forecast summary and emoji
                                     {&f.icon}{" "}{&f.summary}
                                 </div>
                                 {if let (Some(high), Some(low)) = (f.high, f.low) {
@@ -191,7 +183,6 @@ impl Component for BinComponent {
                                 {if let Some(pop) = f.pop {
                                     if pop > 50 {
                                         html! {
-                                            // NOTE: 'text-warning' is kept as it's a color meant to stand out regardless of theme.
                                             <div class="fs-6 text-warning">
                                                 {"⚠️ "}{format!("{}% rain", pop)}
                                             </div>
@@ -208,55 +199,6 @@ impl Component for BinComponent {
                         html! {}
                     }
                 }
-
-                // --- ADDED: Current Conditions Display (Including AQHI and Sun Times) ---
-                {
-                    if let Some(weather) = current_weather_data {
-                        let current = &weather.current;
-                        html! {
-                            <div class="ms-4 p-2 text-body border-start border-secondary">
-                                // AQHI Display
-                                {if let (Some(aqhi), Some(risk)) = (current.aqhi_value, current.aqhi_risk.as_ref()) {
-                                    html! {
-                                        <div class="text-nowrap" title="Air Quality Health Index">
-                                            {"🌬️ AQHI: "}{aqhi}{" ("}{risk}{")"}
-                                        </div>
-                                    }
-                                } else {
-                                    html! {}
-                                }}
-                                // Wind Display (Using helper function from models.rs)
-                                <div class="text-nowrap" title="Wind">
-                                    {"💨 Wind: "}{current.wind_description()}
-                                </div>
-                                // Sunrise Display
-                                {if let Some(sunrise) = current.sunrise.as_ref() {
-                                    html! {
-                                        <div class="text-nowrap" title="Sunrise">
-                                            {"☀️ Sunrise: "}{sunrise}
-                                        </div>
-                                    }
-                                } else {
-                                    html! {}
-                                }}
-                                // Sunset Display
-                                {if let Some(sunset) = current.sunset.as_ref() {
-                                    html! {
-                                        <div class="text-nowrap" title="Sunset">
-                                            {"🌙 Sunset: "}{sunset}
-                                        </div>
-                                    }
-                                } else {
-                                    html! {}
-                                }}
-                            </div>
-                        }
-                    } else {
-                        html! {}
-                    }
-                }
-                // ----------------------------------------------------------------------
-
             </div>
         }
     }

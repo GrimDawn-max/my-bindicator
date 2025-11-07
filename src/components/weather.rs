@@ -1,11 +1,8 @@
+// src/components/weather.rs
 use crate::{
-    components::{
-        weather_daily::{DailyComponent, DailyComponentProps},
-        weather_hourly::HourlyComponent,
-    },
+    components::weather_daily::DailyComponent,  // Removed DailyComponentProps - not needed
     context::weather::WeatherContext,
 };
-use chrono::DateTime;
 use yew::prelude::*;
 use gloo_console::log;
 
@@ -15,7 +12,6 @@ pub fn WeatherComponent() -> Html {
     
     if !weather_ctx.is_loaded {
         return html! {
-            // FIX: Changed 'text-white' to 'text-body'
             <div class="text-body">
                 <p>{"Loading weather data..."}</p>
             </div>
@@ -24,69 +20,38 @@ pub fn WeatherComponent() -> Html {
     
     let weather = weather_ctx.weather.clone();
     
-    if weather.hourly.time.is_empty() || weather.daily.time.is_empty() {
+    if weather.forecasts.is_empty() {
         return html! {
-            // FIX: Changed 'text-white' to 'text-body'
             <div class="text-body">
                 <p>{"No weather data available"}</p>
             </div>
         };
     }
     
-    let offset_sec = weather.utc_offset_seconds / 60 / 60;
-    let offset_hours = if offset_sec >= 0 {
-        format!("+{:02}:00", offset_sec)
-    } else {
-        format!("{:03}:00", offset_sec)
-    };
-    
-    log!(format!("Weather daily time array: {:?}", weather.daily.time));
-    
-    // Create a vec of exactly 7 unique days
-    let mut daily_cards = Vec::new();
-    for i in 0..weather.daily.time.len().min(7) {
-        let time = &weather.daily.time[i];
-        let temp_max = weather.daily.temperature_2m_max[i];
-        let temp_min = weather.daily.temperature_2m_min[i];
-        let precipitation = weather.daily.precipitation_sum[i];
-        let precipitation_probability_max = weather.daily.precipitation_probability_max[i];
-        let code = weather.daily.weather_code[i];
-        
-        // Parse dates at noon to avoid DST transition issues
-        let date = DateTime::parse_from_rfc3339(&format!("{time}T12:00:00{offset_hours}"));
-        let sunrise = DateTime::parse_from_rfc3339(&format!("{}:00{offset_hours}", weather.daily.sunrise[i]));
-        let sunset = DateTime::parse_from_rfc3339(&format!("{}:00{offset_hours}", weather.daily.sunset[i]));
-        
-        if date.is_ok() && sunrise.is_ok() && sunset.is_ok() {
-            log!(format!("Adding card {}: {} - {}", i, time, date.as_ref().unwrap().format("%a")));
-            daily_cards.push((
-                time.clone(),
-                DailyComponentProps {
-                    weather_code: code,
-                    temp_max,
-                    temp_min,
-                    precipitation_sum: precipitation,
-                    precipitation_probability_max,
-                    date: date.unwrap().into(),
-                    sunrise: sunrise.unwrap().into(),
-                    sunset: sunset.unwrap().into(),
-                },
-            ));
+    let daily_cards = weather.forecasts.iter().map(|forecast| {
+        html! {
+            <DailyComponent 
+                key={forecast.day_name.clone()}
+                day_name={forecast.day_name.clone()}
+                icon={forecast.icon.clone()}
+                summary={forecast.summary.clone()}
+                high={forecast.high}
+                low={forecast.low}
+                pop={forecast.pop}
+            />
         }
-    }
+    }).collect::<Html>();
     
-    log!(format!("Total cards to render: {}", daily_cards.len()));
+    log!(format!("Total cards to render: {}", weather.forecasts.len()));
     
     html! {
         <>
-            <HourlyComponent data={weather.hourly.clone()} offset_hours={offset_hours.clone()} />
-            // FIX: Changed 'text-white' to 'text-body' for the main card group container
+            // Current Weather Info (The current temperature display component usually sits here)
+            // Assuming your CurrentComponent is implicitly rendered elsewhere or will be added.
+            
+            // The daily cards
             <div class="card-group text-body mt-3">
-            {
-                daily_cards.into_iter().map(|(key, props)| {
-                    html!{ <DailyComponent key={key} ..props /> }
-                }).collect::<Html>()
-            }
+                { daily_cards }
             </div>
         </>
     }
