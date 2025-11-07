@@ -63,9 +63,11 @@ pub fn WeatherProvider(props: &WeatherProviderProps) -> Html {
     let weather_clone = weather.clone();
     let client_clone_on_mount = client.clone();
     
-    // Initial data fetch on mount
+    // Initial data fetch on mount with small delay for mobile UI rendering
     use_effect_with((), move |_| {
         spawn_local(async move {
+            // Small delay to let UI render first (improves perceived performance on mobile)
+            sleep(Duration::from_millis(150)).await;
             let data = fetch_weather_with_retry(&client_clone_on_mount).await;
             weather_clone.dispatch(data);
         });

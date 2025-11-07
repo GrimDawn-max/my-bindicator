@@ -4,9 +4,15 @@
     <!-- Reload the page every X amount of seconds, in case the app crashes lol -->
     <meta http-equiv="refresh" content="3600">
     <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=5, user-scalable=yes" />
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    
+    <!-- Preconnect to external resources for faster loading -->
+    <link rel="preconnect" href="https://api.allorigins.win">
+    <link rel="preconnect" href="https://weather.gc.ca">
+    <link rel="dns-prefetch" href="https://cdn.jsdelivr.net">
+    
     <title>Bindicator</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"
@@ -23,13 +29,68 @@
     
     <script src="https://cdn.jsdelivr.net/npm/echarts@5.4.2/dist/echarts.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/echarts-gl@2.0.9/dist/echarts-gl.min.js"></script>
-<link rel="modulepreload" href="./bindicator-fc2dea21ff399657.js" crossorigin="anonymous" integrity="sha384-dPlwJpoZyYTrWmh5RWkQHGq+uNIORQiLkz5tIquc73sMmJbZKTMfXVIEQPuTuNRr"><link rel="preload" href="./bindicator-fc2dea21ff399657_bg.wasm" crossorigin="anonymous" integrity="sha384-Y/bUw8uPQDZOn4/XC2PJIsUgWL/oqiDCGti4HkyQ6/XMqyewrFu9JlYEBWurlgTG" as="fetch" type="application/wasm"></head>
+<link rel="modulepreload" href="./bindicator-3becb5ef36e9d985.js" crossorigin="anonymous" integrity="sha384-dPlwJpoZyYTrWmh5RWkQHGq+uNIORQiLkz5tIquc73sMmJbZKTMfXVIEQPuTuNRr"><link rel="preload" href="./bindicator-3becb5ef36e9d985_bg.wasm" crossorigin="anonymous" integrity="sha384-qa4pkaS3us7smIsXIzn+9RikZgPRWnRDVZiNMEDYBQC3zMvF6m40uHg9pSgb+oEh" as="fetch" type="application/wasm"></head>
 <style>
     html,
     body,
     #app {
         height: 100%;
         cursor: none;
+    }
+
+    /* Loading indicator styling */
+    #loading {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: #ffffff;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        z-index: 9999;
+        flex-direction: column;
+        gap: 20px;
+        transition: opacity 0.3s ease-out;
+    }
+    
+    #loading.loaded {
+        opacity: 0;
+        pointer-events: none;
+    }
+    
+    .spinner {
+        border: 4px solid rgba(0, 0, 0, 0.1);
+        border-left-color: #007bff;
+        border-radius: 50%;
+        width: 50px;
+        height: 50px;
+        animation: spin 1s linear infinite;
+    }
+    
+    @keyframes spin {
+        to { transform: rotate(360deg); }
+    }
+    
+    .loading-text {
+        font-size: 1.2em;
+        color: #333;
+        font-weight: 500;
+    }
+    
+    /* Dark mode support for loading screen */
+    @media (prefers-color-scheme: dark) {
+        #loading {
+            background: #212529;
+        }
+        .spinner {
+            border-color: rgba(255, 255, 255, 0.1);
+            border-left-color: #0dcaf0;
+        }
+        .loading-text {
+            color: #fff;
+        }
     }
 
     /* Aggressive CSS to remove any borders from bin images */
@@ -90,10 +151,11 @@
             overflow: visible !important;
         }
         
-        /* Bin icons - much smaller - UPDATED for img tags */
+        /* Bin icons - much smaller - UPDATED for consistent sizing */
         img[alt*="Bin"], img[alt*="Tree"] {
             height: 30px !important;
-            width: auto !important;
+            width: 25px !important;
+            object-fit: contain !important;
             margin-right: 3px !important;
         }
         
@@ -179,10 +241,11 @@
             margin-bottom: -1.5rem !important;
         }
         
-        /* Bin icons - UPDATED for img tags - SMALLER for portrait */
+        /* Bin icons - FIXED for consistent sizing */
         img[alt*="Bin"], img[alt*="Tree"] {
             height: 35px !important;
-            width: auto !important;
+            width: 28px !important;
+            object-fit: contain !important;
             margin-right: 3px !important;
         }
         
@@ -408,9 +471,29 @@
     }
 </style>
 <body>
+    <!-- Loading indicator -->
+    <div id="loading">
+        <div class="spinner"></div>
+        <div class="loading-text">Loading Bindicator...</div>
+    </div>
+    
+    <script>
+        // Hide loading screen when app is ready
+        window.addEventListener('load', function() {
+            setTimeout(function() {
+                document.getElementById('loading').classList.add('loaded');
+                // Remove from DOM after animation
+                setTimeout(function() {
+                    var loader = document.getElementById('loading');
+                    if (loader) loader.remove();
+                }, 300);
+            }, 800);
+        });
+    </script>
+
 <script type="module">
-import init, * as bindings from './bindicator-fc2dea21ff399657.js';
-const wasm = await init({ module_or_path: './bindicator-fc2dea21ff399657_bg.wasm' });
+import init, * as bindings from './bindicator-3becb5ef36e9d985.js';
+const wasm = await init({ module_or_path: './bindicator-3becb5ef36e9d985_bg.wasm' });
 
 
 window.wasmBindings = bindings;
@@ -547,5 +630,5 @@ dispatchEvent(new CustomEvent("TrunkApplicationStarted", {detail: {wasm}}));
     new Client(url).start();
 
 })()
-</script></body>   // Theme attribute now managed by Rust/Yew
+</script></body>
 </html>

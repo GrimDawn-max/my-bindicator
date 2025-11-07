@@ -216,7 +216,7 @@ fn BinImage(&BinImageProps { ref src, ref alt }: &BinImageProps) -> Html {
         <img 
             src={src.clone()} 
             alt={alt.clone()} 
-            style="height: 80px; width: auto; margin-right: 5px; border: none; outline: none; box-shadow: none; background: transparent; padding: 0; display: inline-block; vertical-align: middle;"
+            style="height: 80px; width: 60px; object-fit: contain; margin-right: 5px; border: none; outline: none; box-shadow: none; background: transparent; padding: 0; display: inline-block; vertical-align: middle;"
         />
     }
 }
