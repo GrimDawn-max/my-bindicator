@@ -142,7 +142,12 @@ impl Component for BinComponent {
                                 <BinImage src="GarbageBin.png" alt="Garbage Bin" />
                                 // Brown bin only shown during yard waste season
                                 if show_brown_bin {
-                                    <BinImage src="YardWaste.png" alt="Yard Waste" />
+                                    // FIX: Explicitly set height and width to maintain correct aspect ratio on mobile
+                                    <BinImage 
+                                        src="YardWaste.png" 
+                                        alt="Yard Waste" 
+                                        size_style="height: 4rem; width: 2.9rem;"
+                                    />
                                 }
                             </> 
                         },
@@ -208,16 +213,33 @@ impl Component for BinComponent {
 pub struct BinImageProps {
     pub src: AttrValue,
     pub alt: AttrValue,
+    // NEW: Optional property to inject custom size/style when necessary
+    #[prop_or_default]
+    pub size_style: AttrValue, 
 }
 
 #[function_component]
-fn BinImage(&BinImageProps { ref src, ref alt }: &BinImageProps) -> Html {
+fn BinImage(&BinImageProps { ref src, ref alt, ref size_style }: &BinImageProps) -> Html {
+    
+    // Base style that applies to all bins
+    let base_style = "object-fit: contain; margin-right: 5px; border: none; outline: none; box-shadow: none; background: transparent; padding: 0; display: inline-block; vertical-align: middle;";
+
+    // Determine the final style. All images should have a height of 4rem by default.
+    let final_style = if size_style.is_empty() {
+        // Default style for images that don't need a specific width (Green, Garbage, Blue, Christmas Tree)
+        AttrValue::from(format!("height: 4rem; {}", base_style))
+    } else {
+        // Custom style for the Yard Waste image to fix its aspect ratio
+        AttrValue::from(format!("{} {}", size_style, base_style))
+    };
+
+
     html! {
         <img 
             class="bin-icon"
             src={src.clone()} 
             alt={alt.clone()} 
-            style="object-fit: contain; margin-right: 5px; border: none; outline: none; box-shadow: none; background: transparent; padding: 0; display: inline-block; vertical-align: middle;"
+            style={final_style} // Use the calculated style
         />
     }
 }

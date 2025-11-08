@@ -1,0 +1,641 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <!-- Reload the page every X amount of seconds, in case the app crashes lol -->
+    <meta http-equiv="refresh" content="3600">
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=5, user-scalable=yes" />
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    
+    <!-- Preconnect to external resources for faster loading -->
+    <link rel="preconnect" href="https://api.allorigins.win">
+    <link rel="preconnect" href="https://weather.gc.ca">
+    <link rel="dns-prefetch" href="https://cdn.jsdelivr.net">
+    
+    <title>Bindicator</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"
+        crossorigin="anonymous"></script>
+    <link data-trunk href="./weather-icons-master/font/weather-icons.min.css" rel="css" data-target-path="font">
+    <link data-trunk href="./weather-icons-master/font" rel="copy-dir">
+    
+    <!-- Bin icon PNG files - Tell Trunk to copy these -->
+    <link data-trunk rel="copy-file" href="public/BlueBin.png" />
+    <link data-trunk rel="copy-file" href="public/Christmastree.png" />
+    <link data-trunk rel="copy-file" href="public/GarbageBin.png" />
+    <link data-trunk rel="copy-file" href="public/GreenBin.png" />
+    <link data-trunk rel="copy-file" href="public/YardWaste.png" />
+    
+    <script src="https://cdn.jsdelivr.net/npm/echarts@5.4.2/dist/echarts.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/echarts-gl@2.0.9/dist/echarts-gl.min.js"></script>
+</head>
+<style>
+    html,
+    body,
+    #app {
+        height: 100%;
+        cursor: none;
+    }
+
+    /* Loading indicator styling */
+    #loading {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: #ffffff;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        z-index: 9999;
+        flex-direction: column;
+        gap: 20px;
+        transition: opacity 0.3s ease-out;
+    }
+    
+    #loading.loaded {
+        opacity: 0;
+        pointer-events: none;
+    }
+    
+    .spinner {
+        border: 4px solid rgba(0, 0, 0, 0.1);
+        border-left-color: #007bff;
+        border-radius: 50%;
+        width: 50px;
+        height: 50px;
+        animation: spin 1s linear infinite;
+    }
+    
+    @keyframes spin {
+        to { transform: rotate(360deg); }
+    }
+    
+    .loading-text {
+        font-size: 1.2em;
+        color: #333;
+        font-weight: 500;
+    }
+    
+    /* Dark mode support for loading screen */
+    @media (prefers-color-scheme: dark) {
+        #loading {
+            background: #212529;
+        }
+        .spinner {
+            border-color: rgba(255, 255, 255, 0.1);
+            border-left-color: #0dcaf0;
+        }
+        .loading-text {
+            color: #fff;
+        }
+    }
+
+    /* Aggressive CSS to remove any borders from bin images */
+    img[alt*="Bin"], img[alt*="Tree"], img[alt*="Yard"], img[src*="Bin"], img[src*="Yard"], img[src*="tree"],
+    .bin-icon {
+        border: none !important;
+        outline: none !important;
+        box-shadow: none !important;
+        background: none !important;
+        background-color: transparent !important;
+        padding: 0 !important;
+        margin-right: 5px;
+        display: inline-block;
+        vertical-align: middle;
+        image-rendering: -webkit-optimize-contrast;
+        image-rendering: crisp-edges;
+        object-fit: contain;
+    }
+    
+    /* Default desktop sizing for bin icons */
+    .bin-icon {
+        height: 80px !important;
+        width: 60px !important;
+        max-height: 80px !important;
+        max-width: 60px !important;
+    }
+
+    /* Desktop/tablet - default styling */
+    @media screen and (min-width: 933px) {
+        #app {
+            overflow: hidden;
+        }
+    }
+
+    /* iPhone 15 Pro Max landscape (932 x 430) and iPhone 15 Pro landscape (852 x 393) */
+    @media screen and (max-width: 932px) and (orientation: landscape) {
+        #app {
+            font-size: 11px !important;
+            padding: 0.25rem !important;
+            overflow-x: hidden !important;
+            overflow-y: auto !important;
+        }
+        
+        /* Allow horizontal scroll for forecast */
+        .forecast-grid {
+            display: flex !important;
+            flex-wrap: nowrap !important;
+            overflow-x: auto !important;
+            overflow-y: hidden !important;
+            -webkit-overflow-scrolling: touch !important;
+            scroll-behavior: smooth !important;
+            gap: 10px !important;
+        }
+        
+        .forecast-day {
+            flex: 0 0 auto !important;
+            min-width: 100px !important;
+            max-width: 100px !important;
+        }
+        
+        /* Make sure carousel items allow scrolling */
+        .carousel-item {
+            overflow-x: visible !important;
+            overflow-y: visible !important;
+        }
+        
+        .forecast-card {
+            overflow: visible !important;
+        }
+        
+        /* Bin icons - much smaller - UPDATED for consistent sizing */
+        img[alt*="Bin"], img[alt*="Tree"], img[alt*="Yard"], img[src*="Bin"], img[src*="Yard"], img[src*="tree"],
+        .bin-icon {
+            height: 30px !important;
+            width: 25px !important;
+            max-height: 30px !important;
+            max-width: 25px !important;
+            object-fit: contain !important;
+            margin-right: 3px !important;
+        }
+        
+        /* Christmas tree emoji */
+        .fs-1 {
+            font-size: 0.9rem !important;
+        }
+        
+        /* Bin day text */
+        .fw-bold.text-white {
+            font-size: 0.9rem !important;
+        }
+        
+        /* Weather chart - increased height and much more bottom margin to prevent overlap */
+        #chart {
+            width: 100% !important;
+            max-width: 900px !important;
+            height: 120px !important;
+            margin: 0 auto 5rem auto !important;
+        }
+        
+        /* Daily weather cards - more compact with much more top spacing to prevent overlap */
+        .card-group {
+            gap: 0.15rem !important;
+            margin-top: 5rem !important;
+        }
+        
+        .card {
+            font-size: 0.6rem !important;
+            min-width: 0 !important;
+        }
+        
+        .card-header {
+            padding: 0.1rem !important;
+            font-size: 0.65rem !important;
+        }
+        
+        .card-body {
+            padding: 0.2rem !important;
+            gap: 0.1rem !important;
+        }
+        
+        /* Weather icons in cards */
+        .card-body .display-3 {
+            font-size: 1.2rem !important;
+        }
+        
+        .card-body .wi {
+            font-size: 1.2rem !important;
+        }
+        
+        /* Temperature text */
+        .card-body .fs-5 {
+            font-size: 0.65rem !important;
+        }
+        
+        /* Sunrise/sunset and precipitation */
+        .card-body .fw-bold {
+            font-size: 0.55rem !important;
+        }
+    }
+    
+    /* Portrait mode - allow scrolling */
+    @media screen and (max-width: 430px) and (orientation: portrait) {
+        html, body {
+            overflow-y: auto !important;
+            height: auto !important;
+        }
+        
+        #app {
+            height: auto !important;
+            min-height: 100vh;
+            overflow-y: visible !important;
+            overflow-x: visible !important;
+            font-size: 12px;
+            padding: 0.5rem 0.25rem !important;
+        }
+        
+        /* Stack bins and clock vertically */
+        #app > div:nth-child(2) {
+            flex-direction: column !important;
+            gap: 0.5rem;
+            margin-bottom: -1.5rem !important;
+        }
+        
+        /* Bin icons - FIXED for consistent sizing */
+        img[alt*="Bin"], img[alt*="Tree"], img[alt*="Yard"], img[src*="Bin"], img[src*="Yard"], img[src*="tree"],
+        .bin-icon {
+            height: 35px !important;
+            width: 28px !important;
+            max-height: 35px !important;
+            max-width: 28px !important;
+            object-fit: contain !important;
+            margin-right: 3px !important;
+        }
+        
+        .fs-1 {
+            font-size: 1rem !important;
+        }
+        
+        /* Weather chart - proper sizing to show full legend without cutoff - ADJUSTED to show legend */
+        #chart {
+            width: 120% !important;
+            max-width: 120% !important;
+            height: 260px !important;
+            margin: 0.5rem 0 0.25rem 0 !important;
+            margin-left: 0 !important;
+            overflow: visible !important;
+            transform: scale(0.54) !important;
+            transform-origin: left top !important;
+        }
+        
+        #chart > div {
+            overflow: visible !important;
+        }
+        
+        /* Daily cards - allow wrapping with negative margin to bring cards up substantially */
+        .card-group {
+            display: grid !important;
+            grid-template-columns: repeat(auto-fit, minmax(80px, 1fr)) !important;
+            gap: 0.5rem !important;
+            margin-top: -4.5rem !important;
+        }
+        
+        .card {
+            font-size: 0.75rem !important;
+        }
+        
+        .card-body .display-3 {
+            font-size: 1.5rem !important;
+        }
+    }
+    
+    /* Weather forecast cards - horizontal layout */
+    .forecast-grid {
+        display: grid;
+        grid-template-columns: repeat(7, 1fr);
+        gap: 10px;
+        overflow-x: auto;
+    }
+    
+    .forecast-day {
+        background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+        padding: 15px 10px;
+        border-radius: 12px;
+        text-align: center;
+        transition: transform 0.2s;
+        min-width: 100px;
+    }
+    
+    .forecast-day:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+    }
+    
+    .forecast-day.today {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+    }
+    
+    .day-name {
+        font-weight: bold;
+        font-size: 0.95em;
+        margin-bottom: 8px;
+    }
+    
+    .weather-icon {
+        font-size: 2.5em;
+        margin: 8px 0;
+    }
+    
+    .forecast-temps {
+        margin: 8px 0;
+    }
+    
+    .temp-high {
+        font-size: 1.2em;
+        font-weight: bold;
+        color: #e74c3c;
+    }
+    
+    .forecast-day.today .temp-high {
+        color: #fff;
+    }
+    
+    .temp-low {
+        font-size: 1em;
+        color: #3498db;
+    }
+    
+    .forecast-day.today .temp-low {
+        color: rgba(255,255,255,0.9);
+    }
+    
+    .pop {
+        font-size: 0.85em;
+        color: #666;
+        margin-top: 5px;
+    }
+    
+    .forecast-day.today .pop {
+        color: rgba(255,255,255,0.8);
+    }
+    
+    .forecast-summary {
+        font-size: 0.8em;
+        color: #777;
+        margin-top: 5px;
+        line-height: 1.2;
+    }
+    
+    .forecast-day.today .forecast-summary {
+        color: rgba(255,255,255,0.9);
+    }
+    
+    /* Weather cards styling */
+    .weather-card, .forecast-card {
+        background: white;
+        border-radius: 20px;
+        padding: 30px;
+        margin-bottom: 20px;
+        box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+    }
+    
+    .section-title {
+        color: #333;
+        margin-bottom: 20px;
+        font-size: 1.5em;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+    }
+    
+    .ec-badge {
+        margin-left: auto;
+        font-size: 1.5em;
+    }
+    
+    /* Current weather styling */
+    .current-weather {
+        display: grid;
+        grid-template-columns: auto 1fr;
+        gap: 30px;
+        align-items: center;
+    }
+    
+    .temp-section {
+        text-align: center;
+    }
+    
+    .temp-display {
+        font-size: 4em;
+        font-weight: 900;
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        background-clip: text;
+        line-height: 1;
+    }
+    
+    .condition-text {
+        font-size: 1.3em;
+        color: #555;
+        margin-top: 10px;
+        font-weight: 500;
+    }
+    
+    .weather-details {
+        display: grid;
+        grid-template-columns: repeat(2, 1fr);
+        gap: 12px;
+    }
+    
+    .detail-item {
+        background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+        padding: 15px;
+        border-radius: 10px;
+        transition: transform 0.2s;
+    }
+    
+    .detail-item:hover {
+        transform: translateY(-3px);
+    }
+    
+    .detail-label {
+        font-size: 0.85em;
+        color: #666;
+        margin-bottom: 3px;
+        font-weight: 600;
+    }
+    
+    .detail-value {
+        font-size: 1.2em;
+        font-weight: bold;
+        color: #333;
+    }
+    
+    /* Mobile responsive for weather */
+    @media (max-width: 768px) {
+        .forecast-grid {
+            grid-template-columns: repeat(auto-fit, minmax(90px, 1fr));
+            gap: 8px;
+        }
+        
+        .current-weather {
+            grid-template-columns: 1fr;
+        }
+        
+        .weather-details {
+            grid-template-columns: 1fr;
+        }
+        
+        .temp-display {
+            font-size: 3em;
+        }
+    }
+
+    /* ===== DARK MODE IMPROVEMENTS ===== */
+    /* Universal text brightness in dark mode */
+    [data-bs-theme="dark"] * {
+        color: inherit;
+    }
+    
+    [data-bs-theme="dark"] body,
+    [data-bs-theme="dark"] #app {
+        color: #e9ecef !important;
+    }
+
+    [data-bs-theme="dark"] .weather-container,
+    [data-bs-theme="dark"] .weather-container * {
+        color: #e9ecef !important;
+    }
+
+    [data-bs-theme="dark"] .card {
+        background-color: rgba(33, 37, 41, 0.95) !important;
+        border-color: rgba(255, 255, 255, 0.125) !important;
+        color: #e9ecef !important;
+    }
+
+    [data-bs-theme="dark"] .card *,
+    [data-bs-theme="dark"] .card-title,
+    [data-bs-theme="dark"] .card-body,
+    [data-bs-theme="dark"] .card-header,
+    [data-bs-theme="dark"] .weather-details,
+    [data-bs-theme="dark"] .weather-details * {
+        color: #e9ecef !important;
+    }
+
+    [data-bs-theme="dark"] .weather-details strong,
+    [data-bs-theme="dark"] strong,
+    [data-bs-theme="dark"] b {
+        color: #fff !important;
+    }
+
+    [data-bs-theme="dark"] .detail-item {
+        background: rgba(52, 58, 64, 0.8) !important;
+        color: #e9ecef !important;
+    }
+
+    [data-bs-theme="dark"] .detail-label {
+        color: #adb5bd !important;
+    }
+
+    [data-bs-theme="dark"] .detail-value {
+        color: #e9ecef !important;
+    }
+
+    /* Daily forecast cards in dark mode */
+    [data-bs-theme="dark"] .forecast-day {
+        background: linear-gradient(135deg, #343a40 0%, #495057 100%) !important;
+        color: #e9ecef !important;
+    }
+
+    [data-bs-theme="dark"] .forecast-day *,
+    [data-bs-theme="dark"] .forecast-day .day-name,
+    [data-bs-theme="dark"] .forecast-day .temp-high,
+    [data-bs-theme="dark"] .forecast-day .temp-low,
+    [data-bs-theme="dark"] .forecast-day .pop,
+    [data-bs-theme="dark"] .forecast-day .forecast-summary {
+        color: #e9ecef !important;
+    }
+
+    [data-bs-theme="dark"] .forecast-day.today {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%) !important;
+        color: white !important;
+    }
+    
+    [data-bs-theme="dark"] .forecast-day.today * {
+        color: white !important;
+    }
+
+    /* Current weather display in dark mode */
+    [data-bs-theme="dark"] .condition-text {
+        color: #e9ecef !important;
+    }
+
+    [data-bs-theme="dark"] .section-title {
+        color: #e9ecef !important;
+    }
+    
+    [data-bs-theme="dark"] h1,
+    [data-bs-theme="dark"] h2,
+    [data-bs-theme="dark"] h3,
+    [data-bs-theme="dark"] h4,
+    [data-bs-theme="dark"] h5,
+    [data-bs-theme="dark"] h6 {
+        color: #e9ecef !important;
+    }
+    
+    [data-bs-theme="dark"] p,
+    [data-bs-theme="dark"] span,
+    [data-bs-theme="dark"] div:not(.spinner):not(.loading-text) {
+        color: #e9ecef !important;
+    }
+
+    /* Alert styling in dark mode */
+    [data-bs-theme="dark"] .alert {
+        color: #e9ecef !important;
+        background-color: rgba(13, 110, 253, 0.2) !important;
+        border-color: rgba(13, 110, 253, 0.5) !important;
+    }
+
+    [data-bs-theme="dark"] .alert-warning {
+        background-color: rgba(255, 193, 7, 0.2) !important;
+        border-color: rgba(255, 193, 7, 0.5) !important;
+        color: #fff !important;
+    }
+    
+    [data-bs-theme="dark"] .alert-info {
+        background-color: rgba(13, 202, 240, 0.2) !important;
+        border-color: rgba(13, 202, 240, 0.5) !important;
+        color: #fff !important;
+    }
+
+    /* Weather card backgrounds in dark mode */
+    [data-bs-theme="dark"] .weather-card,
+    [data-bs-theme="dark"] .forecast-card {
+        background: rgba(33, 37, 41, 0.95) !important;
+        box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5) !important;
+    }
+    
+    /* Make sure small text is also bright */
+    [data-bs-theme="dark"] .small,
+    [data-bs-theme="dark"] small {
+        color: #adb5bd !important;
+    }
+
+</style>
+<body>
+    <!-- Loading indicator -->
+    <div id="loading">
+        <div class="spinner"></div>
+        <div class="loading-text">Loading Bindicator...</div>
+    </div>
+    
+    <script>
+        // Hide loading screen when app is ready
+        window.addEventListener('load', function() {
+            setTimeout(function() {
+                document.getElementById('loading').classList.add('loaded');
+                // Remove from DOM after animation
+                setTimeout(function() {
+                    var loader = document.getElementById('loading');
+                    if (loader) loader.remove();
+                }, 300);
+            }, 800);
+        });
+    </script>
+</body>
+</html>
