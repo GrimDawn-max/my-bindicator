@@ -94,7 +94,7 @@
     }
 
     /* Aggressive CSS to remove any borders from bin images */
-    img[alt*="Bin"], img[alt*="Tree"] {
+    img[alt*="Bin"], img[alt*="Tree"], img[alt*="Yard"], img[src*="Bin"], img[src*="Yard"], img[src*="tree"] {
         border: none !important;
         outline: none !important;
         box-shadow: none !important;
@@ -106,6 +106,7 @@
         vertical-align: middle;
         image-rendering: -webkit-optimize-contrast;
         image-rendering: crisp-edges;
+        object-fit: contain;
     }
 
     /* Desktop/tablet - default styling */
@@ -152,9 +153,11 @@
         }
         
         /* Bin icons - much smaller - UPDATED for consistent sizing */
-        img[alt*="Bin"], img[alt*="Tree"] {
+        img[alt*="Bin"], img[alt*="Tree"], img[alt*="Yard"], img[src*="Bin"], img[src*="Yard"], img[src*="tree"] {
             height: 30px !important;
             width: 25px !important;
+            max-height: 30px !important;
+            max-width: 25px !important;
             object-fit: contain !important;
             margin-right: 3px !important;
         }
@@ -242,9 +245,11 @@
         }
         
         /* Bin icons - FIXED for consistent sizing */
-        img[alt*="Bin"], img[alt*="Tree"] {
+        img[alt*="Bin"], img[alt*="Tree"], img[alt*="Yard"], img[src*="Bin"], img[src*="Yard"], img[src*="tree"] {
             height: 35px !important;
             width: 28px !important;
+            max-height: 35px !important;
+            max-width: 28px !important;
             object-fit: contain !important;
             margin-right: 3px !important;
         }
@@ -471,7 +476,18 @@
     }
 
     /* ===== DARK MODE IMPROVEMENTS ===== */
-    [data-bs-theme="dark"] .weather-container {
+    /* Universal text brightness in dark mode */
+    [data-bs-theme="dark"] * {
+        color: inherit;
+    }
+    
+    [data-bs-theme="dark"] body,
+    [data-bs-theme="dark"] #app {
+        color: #e9ecef !important;
+    }
+
+    [data-bs-theme="dark"] .weather-container,
+    [data-bs-theme="dark"] .weather-container * {
         color: #e9ecef !important;
     }
 
@@ -481,18 +497,24 @@
         color: #e9ecef !important;
     }
 
+    [data-bs-theme="dark"] .card *,
     [data-bs-theme="dark"] .card-title,
     [data-bs-theme="dark"] .card-body,
-    [data-bs-theme="dark"] .weather-details {
+    [data-bs-theme="dark"] .card-header,
+    [data-bs-theme="dark"] .weather-details,
+    [data-bs-theme="dark"] .weather-details * {
         color: #e9ecef !important;
     }
 
-    [data-bs-theme="dark"] .weather-details strong {
+    [data-bs-theme="dark"] .weather-details strong,
+    [data-bs-theme="dark"] strong,
+    [data-bs-theme="dark"] b {
         color: #fff !important;
     }
 
     [data-bs-theme="dark"] .detail-item {
         background: rgba(52, 58, 64, 0.8) !important;
+        color: #e9ecef !important;
     }
 
     [data-bs-theme="dark"] .detail-label {
@@ -509,6 +531,7 @@
         color: #e9ecef !important;
     }
 
+    [data-bs-theme="dark"] .forecast-day *,
     [data-bs-theme="dark"] .forecast-day .day-name,
     [data-bs-theme="dark"] .forecast-day .temp-high,
     [data-bs-theme="dark"] .forecast-day .temp-low,
@@ -521,6 +544,10 @@
         background: linear-gradient(135deg, #667eea 0%, #764ba2 100%) !important;
         color: white !important;
     }
+    
+    [data-bs-theme="dark"] .forecast-day.today * {
+        color: white !important;
+    }
 
     /* Current weather display in dark mode */
     [data-bs-theme="dark"] .condition-text {
@@ -528,6 +555,21 @@
     }
 
     [data-bs-theme="dark"] .section-title {
+        color: #e9ecef !important;
+    }
+    
+    [data-bs-theme="dark"] h1,
+    [data-bs-theme="dark"] h2,
+    [data-bs-theme="dark"] h3,
+    [data-bs-theme="dark"] h4,
+    [data-bs-theme="dark"] h5,
+    [data-bs-theme="dark"] h6 {
+        color: #e9ecef !important;
+    }
+    
+    [data-bs-theme="dark"] p,
+    [data-bs-theme="dark"] span,
+    [data-bs-theme="dark"] div:not(.spinner):not(.loading-text) {
         color: #e9ecef !important;
     }
 
@@ -543,6 +585,12 @@
         border-color: rgba(255, 193, 7, 0.5) !important;
         color: #fff !important;
     }
+    
+    [data-bs-theme="dark"] .alert-info {
+        background-color: rgba(13, 202, 240, 0.2) !important;
+        border-color: rgba(13, 202, 240, 0.5) !important;
+        color: #fff !important;
+    }
 
     /* Weather card backgrounds in dark mode */
     [data-bs-theme="dark"] .weather-card,
@@ -550,6 +598,13 @@
         background: rgba(33, 37, 41, 0.95) !important;
         box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5) !important;
     }
+    
+    /* Make sure small text is also bright */
+    [data-bs-theme="dark"] .small,
+    [data-bs-theme="dark"] small {
+        color: #adb5bd !important;
+    }
+
 </style>
 <body>
     <!-- Loading indicator -->
