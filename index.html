@@ -469,6 +469,87 @@
             font-size: 3em;
         }
     }
+
+    /* ===== DARK MODE IMPROVEMENTS ===== */
+    [data-bs-theme="dark"] .weather-container {
+        color: #e9ecef !important;
+    }
+
+    [data-bs-theme="dark"] .card {
+        background-color: rgba(33, 37, 41, 0.95) !important;
+        border-color: rgba(255, 255, 255, 0.125) !important;
+        color: #e9ecef !important;
+    }
+
+    [data-bs-theme="dark"] .card-title,
+    [data-bs-theme="dark"] .card-body,
+    [data-bs-theme="dark"] .weather-details {
+        color: #e9ecef !important;
+    }
+
+    [data-bs-theme="dark"] .weather-details strong {
+        color: #fff !important;
+    }
+
+    [data-bs-theme="dark"] .detail-item {
+        background: rgba(52, 58, 64, 0.8) !important;
+    }
+
+    [data-bs-theme="dark"] .detail-label {
+        color: #adb5bd !important;
+    }
+
+    [data-bs-theme="dark"] .detail-value {
+        color: #e9ecef !important;
+    }
+
+    /* Daily forecast cards in dark mode */
+    [data-bs-theme="dark"] .forecast-day {
+        background: linear-gradient(135deg, #343a40 0%, #495057 100%) !important;
+        color: #e9ecef !important;
+    }
+
+    [data-bs-theme="dark"] .forecast-day .day-name,
+    [data-bs-theme="dark"] .forecast-day .temp-high,
+    [data-bs-theme="dark"] .forecast-day .temp-low,
+    [data-bs-theme="dark"] .forecast-day .pop,
+    [data-bs-theme="dark"] .forecast-day .forecast-summary {
+        color: #e9ecef !important;
+    }
+
+    [data-bs-theme="dark"] .forecast-day.today {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%) !important;
+        color: white !important;
+    }
+
+    /* Current weather display in dark mode */
+    [data-bs-theme="dark"] .condition-text {
+        color: #e9ecef !important;
+    }
+
+    [data-bs-theme="dark"] .section-title {
+        color: #e9ecef !important;
+    }
+
+    /* Alert styling in dark mode */
+    [data-bs-theme="dark"] .alert {
+        color: #e9ecef !important;
+        background-color: rgba(13, 110, 253, 0.2) !important;
+        border-color: rgba(13, 110, 253, 0.5) !important;
+    }
+
+    [data-bs-theme="dark"] .alert-warning {
+        background-color: rgba(255, 193, 7, 0.2) !important;
+        border-color: rgba(255, 193, 7, 0.5) !important;
+        color: #fff !important;
+    }
+
+    /* Weather card backgrounds in dark mode */
+    [data-bs-theme="dark"] .weather-card,
+    [data-bs-theme="dark"] .forecast-card {
+        background: rgba(33, 37, 41, 0.95) !important;
+        box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5) !important;
+    }
 </style>
 <body>
     <!-- Loading indicator -->
