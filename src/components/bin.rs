@@ -214,9 +214,10 @@ pub struct BinImageProps {
 fn BinImage(&BinImageProps { ref src, ref alt }: &BinImageProps) -> Html {
     html! {
         <img 
+            class="bin-icon"
             src={src.clone()} 
             alt={alt.clone()} 
-            style="height: 80px; width: 60px; object-fit: contain; margin-right: 5px; border: none; outline: none; box-shadow: none; background: transparent; padding: 0; display: inline-block; vertical-align: middle;"
+            style="object-fit: contain; margin-right: 5px; border: none; outline: none; box-shadow: none; background: transparent; padding: 0; display: inline-block; vertical-align: middle;"
         />
     }
 }

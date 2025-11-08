@@ -94,7 +94,8 @@
     }
 
     /* Aggressive CSS to remove any borders from bin images */
-    img[alt*="Bin"], img[alt*="Tree"], img[alt*="Yard"], img[src*="Bin"], img[src*="Yard"], img[src*="tree"] {
+    img[alt*="Bin"], img[alt*="Tree"], img[alt*="Yard"], img[src*="Bin"], img[src*="Yard"], img[src*="tree"],
+    .bin-icon {
         border: none !important;
         outline: none !important;
         box-shadow: none !important;
@@ -107,6 +108,14 @@
         image-rendering: -webkit-optimize-contrast;
         image-rendering: crisp-edges;
         object-fit: contain;
+    }
+    
+    /* Default desktop sizing for bin icons */
+    .bin-icon {
+        height: 80px !important;
+        width: 60px !important;
+        max-height: 80px !important;
+        max-width: 60px !important;
     }
 
     /* Desktop/tablet - default styling */
@@ -153,7 +162,8 @@
         }
         
         /* Bin icons - much smaller - UPDATED for consistent sizing */
-        img[alt*="Bin"], img[alt*="Tree"], img[alt*="Yard"], img[src*="Bin"], img[src*="Yard"], img[src*="tree"] {
+        img[alt*="Bin"], img[alt*="Tree"], img[alt*="Yard"], img[src*="Bin"], img[src*="Yard"], img[src*="tree"],
+        .bin-icon {
             height: 30px !important;
             width: 25px !important;
             max-height: 30px !important;
@@ -245,7 +255,8 @@
         }
         
         /* Bin icons - FIXED for consistent sizing */
-        img[alt*="Bin"], img[alt*="Tree"], img[alt*="Yard"], img[src*="Bin"], img[src*="Yard"], img[src*="tree"] {
+        img[alt*="Bin"], img[alt*="Tree"], img[alt*="Yard"], img[src*="Bin"], img[src*="Yard"], img[src*="tree"],
+        .bin-icon {
             height: 35px !important;
             width: 28px !important;
             max-height: 35px !important;
