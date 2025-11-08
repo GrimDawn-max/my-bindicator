@@ -1,11 +1,11 @@
 use chrono::prelude::*;
 use chrono::{DateTime, Local, Weekday};
-use futures::StreamExt;
+use futures_util::StreamExt;
 use std::time::Duration;
 use yew::platform::time::interval;
 use yew::{function_component, html, AttrValue, Component, Context, Html, Properties};
 
-use crate::weather::models::WeatherData;
+use crate::weather::api::WeatherData;
 
 const REFRESH_HOURS: u64 = 1;
 

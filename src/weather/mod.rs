@@ -1,10 +1,13 @@
 // src/weather/mod.rs
-
 pub mod api;
-pub mod models;
 pub mod components;
-pub mod test_data;  // Test data link
 
-pub use api::EnvironmentCanadaClient;
-pub use models::WeatherData;
-pub use components::WeatherDisplay;
+// Re-export the main types that other modules need
+pub use api::{
+    WeatherData, 
+    CurrentConditions, 
+    HourlyForecast, 
+    DailyForecast,
+    AirQuality,
+    fetch_weather_data,
+};

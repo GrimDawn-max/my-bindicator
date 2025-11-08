@@ -1,230 +1,122 @@
-// src/weather/components.rs
+// src/weather/components.rs - COMPLETE REPLACEMENT
 
 use yew::prelude::*;
-use wasm_bindgen_futures::spawn_local;
-use gloo_timers::callback::Interval;
-use crate::weather::{EnvironmentCanadaClient, WeatherData};
-
-pub enum WeatherMsg {
-    LoadWeather,
-    WeatherLoaded(Result<WeatherData, String>),
-}
+use gloo_console::log;
+use crate::weather::api::WeatherData;
 
 #[derive(Properties, PartialEq)]
-pub struct WeatherProps {
-    #[prop_or_default]
-    pub on_weather_loaded: Option<Callback<WeatherData>>,
+pub struct WeatherDisplayProps {
+    pub weather: WeatherData,
 }
 
-pub struct WeatherDisplay {
-    weather: Option<WeatherData>,
-    loading: bool,
-    error: Option<String>,
-    _interval: Option<Interval>,
-}
-
-impl Component for WeatherDisplay {
-    type Message = WeatherMsg;
-    type Properties = WeatherProps;
+#[function_component(WeatherDisplay)]
+pub fn weather_display(props: &WeatherDisplayProps) -> Html {
+    let weather = &props.weather;
     
-    fn create(ctx: &Context<Self>) -> Self {
-        // Load weather on mount
-        ctx.link().send_message(WeatherMsg::LoadWeather);
-        
-        // Auto-refresh every 15 minutes
-        let link = ctx.link().clone();
-        let interval = Interval::new(15 * 60 * 1000, move || {
-            link.send_message(WeatherMsg::LoadWeather);
-        });
-        
-        Self {
-            weather: None,
-            loading: true,
-            error: None,
-            _interval: Some(interval),
-        }
-    }
-    
-    fn update(&mut self, ctx: &Context<Self>, msg: Self::Message) -> bool {
-        match msg {
-            WeatherMsg::LoadWeather => {
-                self.loading = true;
-                let link = ctx.link().clone();
-                
-              spawn_local(async move {
-                let client = EnvironmentCanadaClient::toronto();
-                let result = client.fetch_weather().await;
-                link.send_message(WeatherMsg::WeatherLoaded(result));
-              });
-                
-                true
-            }
-            WeatherMsg::WeatherLoaded(result) => {
-                self.loading = false;
-                
-                match result {
-                    Ok(data) => {
-                        // Notify parent component
-                        if let Some(callback) = &ctx.props().on_weather_loaded {
-                            callback.emit(data.clone());
-                        }
-                        self.weather = Some(data);
-                        self.error = None;
-                    }
-                    Err(err) => {
-                        self.error = Some(err);
-                    }
-                }
-                
-                true
-            }
-        }
-    }
-    
-    fn view(&self, _ctx: &Context<Self>) -> Html {
-        if self.loading && self.weather.is_none() {
-            return html! {
-                <div class="loading">{"Loading weather..."}</div>
-            };
-        }
-        
-        if let Some(ref weather) = self.weather {
-            self.render_weather(weather)
-        } else if let Some(ref error) = self.error {
-            html! {
-                <div class="error">
-                    <p>{"Unable to load weather data"}</p>
-                    <small>{error}</small>
-                </div>
-            }
-        } else {
-            html! { <div>{"No data"}</div> }
-        }
+    html! {
+        <div class="weather-display">
+            {render_current(&weather.current)}
+            {render_daily_forecast(&weather.daily)}
+        </div>
     }
 }
 
-impl WeatherDisplay {
-    fn render_weather(&self, weather: &WeatherData) -> Html {
-        html! {
-            <>
-                {self.render_warnings(&weather.warnings)}
-                {self.render_current(&weather.current)}
-                {self.render_forecast(&weather.forecasts)}
-            </>
-        }
-    }
-    
-    fn render_warnings(&self, warnings: &[crate::weather::models::WeatherWarning]) -> Html {
-        if warnings.is_empty() {
-            return html! {};
-        }
-        
-        let warning = &warnings[0];
-        let class = if warning.priority == "high" {
-            "weather-alert severe"
-        } else {
-            "weather-alert"
-        };
-        
-        html! {
-            <div class={class}>
-                <div class="alert-icon">{"⚠️"}</div>
-                <div class="alert-content">
-                    <h3>{&warning.warning_type}</h3>
-                    <p>{&warning.description}</p>
-                </div>
-            </div>
-        }
-    }
-    
-    fn render_current(&self, current: &crate::weather::models::CurrentConditions) -> Html {
-        html! {
-            <div class="card weather-card">
-                <h2 class="section-title">
-                    <span>{"🌤️"}</span>
-                    <span>{"Current Weather"}</span>
-                    <span class="ec-badge">{"🍁"}</span>
-                </h2>
-                
-                <div class="current-weather">
-                    <div class="temp-section">
-                        <div class="temp-display">{format!("{}°C", current.temperature.round())}</div>
-                        <div class="condition-text">{&current.condition}</div>
-                    </div>
-                    
-                    <div class="weather-details">
-                        <div class="detail-item">
-                            <div class="detail-label">{"💧 Humidity"}</div>
-                            <div class="detail-value">
-                                {current.humidity.map(|h| format!("{}%", h)).unwrap_or_else(|| "--".to_string())}
-                            </div>
-                        </div>
-                        
-                        <div class="detail-item">
-                            <div class="detail-label">{"💨 Wind"}</div>
-                            <div class="detail-value">{current.wind_description()}</div>
-                        </div>
-                        
-                        <div class="detail-item">
-                            <div class="detail-label">{"🌡️ Feels Like"}</div>
-                            <div class="detail-value">{format!("{}°C", current.feels_like().round())}</div>
-                        </div>
-                        
-                        <div class="detail-item">
-                            <div class="detail-label">{"👁️ Visibility"}</div>
-                            <div class="detail-value">
-                                {current.visibility.map(|v| format!("{} km", v)).unwrap_or_else(|| "--".to_string())}
+fn render_current(current: &crate::weather::api::CurrentConditions) -> Html {
+    html! {
+        <div class="card mb-3 current-weather">
+            <div class="card-body">
+                <h5 class="card-title">{"Current Conditions"}</h5>
+                <div class="row">
+                    <div class="col-md-6">
+                        <div class="d-flex align-items-center mb-2">
+                            <span class="weather-icon me-2" style="font-size: 3rem;">{&current.icon}</span>
+                            <div>
+                                <h2 class="mb-0">{format!("{}°C", current.temperature)}</h2>
+                                <p class="mb-0">{&current.condition}</p>
                             </div>
                         </div>
                     </div>
-                </div>
-            </div>
-        }
-    }
-    
-    fn render_forecast(&self, forecasts: &[crate::weather::models::DailyForecast]) -> Html {
-        if forecasts.is_empty() {
-            return html! {};
-        }
-        
-        html! {
-            <div class="card forecast-card">
-                <h2 class="section-title">
-                    <span>{"7-Day Forecast"}</span>
-                </h2>
-                
-                <div class="forecast-grid">
-                    {for forecasts.iter().enumerate().map(|(i, forecast)| {
-                        let is_today = i == 0;
-                        let class = if is_today { "forecast-day today" } else { "forecast-day" };
-                        
-                        html! {
-                            <div class={class}>
-                                <div class="day-name">{&forecast.day_name}</div>
-                                <div class="weather-icon">{&forecast.icon}</div>
-                                <div class="forecast-temps">
-                                    {if let Some(high) = forecast.high {
-                                        html! { <div class="temp-high">{format!("{}°", high)}</div> }
-                                    } else {
-                                        html! {}
-                                    }}
-                                    {if let Some(low) = forecast.low {
-                                        html! { <div class="temp-low">{format!("{}°", low)}</div> }
-                                    } else {
-                                        html! {}
-                                    }}
+                    <div class="col-md-6">
+                        <div class="weather-details small">
+                            <div class="d-flex justify-content-between mb-1">
+                                <span>{"Humidity:"}</span>
+                                <strong>{format!("{}%", current.humidity)}</strong>
+                            </div>
+                            <div class="d-flex justify-content-between mb-1">
+                                <span>{"Wind:"}</span>
+                                <strong>{format!("{} km/h {}", current.wind_speed, current.wind_direction)}</strong>
+                            </div>
+                            <div class="d-flex justify-content-between mb-1">
+                                <span>{"Pressure:"}</span>
+                                <strong>{format!("{:.1} kPa", current.pressure)}</strong>
+                            </div>
+                            <div class="d-flex justify-content-between mb-1">
+                                <span>{"Visibility:"}</span>
+                                <strong>{format!("{:.1} km", current.visibility)}</strong>
+                            </div>
+                            <div class="d-flex justify-content-between">
+                                <span>{"Dewpoint:"}</span>
+                                <strong>{format!("{:.1}°C", current.dewpoint)}</strong>
+                            </div>
+                            if let Some(ref aq) = current.air_quality {
+                                <div class="d-flex justify-content-between mt-1">
+                                    <span>{"Air Quality:"}</span>
+                                    <strong>{format!("{} ({})", aq.index, aq.category)}</strong>
                                 </div>
-                                {if let Some(pop) = forecast.pop {
-                                    html! { <div class="pop">{format!("💧 {}%", pop)}</div> }
-                                } else {
-                                    html! {}
-                                }}
-                                <div class="forecast-summary">{&forecast.summary}</div>
-                            </div>
-                        }
-                    })}
+                            }
+                        </div>
+                    </div>
                 </div>
             </div>
-        }
+        </div>
+    }
+}
+
+fn render_daily_forecast(forecasts: &[crate::weather::api::DailyForecast]) -> Html {
+    html! {
+        <div class="row g-2 mb-3">
+            <div class="col-12">
+                <h5>{"7-Day Forecast"}</h5>
+            </div>
+            {
+                forecasts.iter().map(|forecast| {
+                    let high_display = forecast.high
+                        .map(|h| format!("{}", h))
+                        .unwrap_or_else(|| "N/A".to_string());
+                    
+                    let low_display = forecast.low
+                        .map(|l| format!("{}", l))
+                        .unwrap_or_else(|| "N/A".to_string());
+                    
+                    let pop_display = forecast.pop
+                        .map(|p| format!("{}%", p))
+                        .unwrap_or_else(|| "N/A".to_string());
+                    
+                    html! {
+                        <div class="col" key={forecast.day_name.clone()}>
+                            <div class="card">
+                                <div class="card-header text-center p-0 text-body">
+                                    {&forecast.day_name}
+                                </div>
+                                <div class="card-body d-flex flex-column align-items-center gap-1 p-0">
+                                    <div class="display-3">
+                                        {&forecast.icon}
+                                    </div>
+                                    <div class="text-nowrap text-body fw-bold fs-5">
+                                        {format!("{} - {} ºC", high_display, low_display)}
+                                    </div>
+                                    <div class="text-nowrap text-body fw-bold">
+                                        {&forecast.summary}
+                                    </div>
+                                    <div class="text-body fw-bold">
+                                        {format!("POP {}", pop_display)}
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    }
+                }).collect::<Html>()
+            }
+        </div>
     }
 }

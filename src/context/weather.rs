@@ -1,132 +1,133 @@
+// src/context/weather.rs - COMPLETE REPLACEMENT
+
 use std::rc::Rc;
-use core::time::Duration;
-use gloo_timers::future::sleep;
-
-use gloo_console::{log, warn}; 
-use yew::{platform::spawn_local, prelude::*};
+use yew::prelude::*;
+use gloo_console::log;
+use gloo_timers::future::TimeoutFuture;
+use serde::{Deserialize, Serialize};
 use yew_hooks::use_interval;
+use crate::weather::api::{WeatherData, fetch_weather_data};
 
-use crate::{
-    context::location::LocationContext,
-    weather::api::EnvironmentCanadaClient,
-    weather::models::WeatherData,
-};
-
-// Retry constants
-#[allow(dead_code)]
-const MAX_RETRIES: u8 = 3;
-#[allow(dead_code)]
-const RETRY_DELAY_MS: u64 = 2000; // 2 seconds delay between retries
-
-#[allow(dead_code)]
-#[derive(Debug, PartialEq, Clone)]
-pub struct WeatherCtx {
-    pub is_loaded: bool,
-    pub weather: WeatherData,
+#[derive(Clone, PartialEq, Serialize, Deserialize)]
+pub struct WeatherContextData {
+    pub weather: Option<WeatherData>,
+    pub loading: bool,
+    pub error: Option<String>,
 }
 
-impl Reducible for WeatherCtx {
-    type Action = WeatherData;
-
-    fn reduce(self: Rc<Self>, data: Self::Action) -> Rc<Self> {
-        WeatherCtx {
-            is_loaded: true,
-            weather: data,
+impl Default for WeatherContextData {
+    fn default() -> Self {
+        Self {
+            weather: None,
+            loading: true,
+            error: None,
         }
-        .into()
     }
 }
 
-#[allow(dead_code)]
-pub type WeatherContext = UseReducerHandle<WeatherCtx>;
-
-#[allow(dead_code)]
-#[derive(Properties, Debug, PartialEq)]
-pub struct WeatherProviderProps {
-    #[prop_or_default]
-    pub children: Html,
+#[derive(Clone, PartialEq)]
+pub struct WeatherContext {
+    pub data: Rc<WeatherContextData>,
+    pub refresh: Callback<()>,
 }
 
-#[function_component]
-pub fn WeatherProvider(props: &WeatherProviderProps) -> Html {
-    let weather = use_reducer(|| WeatherCtx {
-        is_loaded: false,
-        weather: WeatherData {
-            ..Default::default()
-        },
-    });
+#[derive(Properties, PartialEq)]
+pub struct WeatherProviderProps {
+    pub children: Children,
+}
 
-    let _location_ctx = use_context::<LocationContext>().unwrap(); 
-
-    let client = EnvironmentCanadaClient::toronto();
-
-    let weather_clone = weather.clone();
-    let client_clone_on_mount = client.clone();
+#[function_component(WeatherProvider)]
+pub fn weather_provider(props: &WeatherProviderProps) -> Html {
+    let state = use_state(WeatherContextData::default);
     
-    // Initial data fetch on mount with small delay for mobile UI rendering
-    use_effect_with((), move |_| {
-        spawn_local(async move {
-            // Small delay to let UI render first (improves perceived performance on mobile)
-            sleep(Duration::from_millis(150)).await;
-            let data = fetch_weather_with_retry(&client_clone_on_mount).await;
-            weather_clone.dispatch(data);
-        });
-        || ()
-    });
-
-    // Interval logic for hourly updates
-    let update_every_millis = 1000 * 60 * 60; // 1 hour
-    let client_clone_on_interval = client.clone();
-    let weather_clone_on_interval = weather.clone();
-    
-    use_interval(
-        move || {
-            log!("In use interval: Attempting weather refresh.");
-            
-            let client_clone = client_clone_on_interval.clone();
-            let weather_clone = weather_clone_on_interval.clone();
-            
-            spawn_local(async move {
-                let data = fetch_weather_with_retry(&client_clone).await;
-                weather_clone.dispatch(data);
+    // Refresh callback
+    let refresh = {
+        let state = state.clone();
+        Callback::from(move |_| {
+            let state = state.clone();
+            wasm_bindgen_futures::spawn_local(async move {
+                state.set(WeatherContextData {
+                    weather: None,
+                    loading: true,
+                    error: None,
+                });
+                
+                match fetch_weather_with_retry().await {
+                    Ok(weather) => {
+                        state.set(WeatherContextData {
+                            weather: Some(weather),
+                            loading: false,
+                            error: None,
+                        });
+                    }
+                    Err(e) => {
+                        log!(&format!("Error fetching weather: {}", e));
+                        state.set(WeatherContextData {
+                            weather: None,
+                            loading: false,
+                            error: Some(e),
+                        });
+                    }
+                }
             });
-        },
-        update_every_millis,
-    );
-    
+        })
+    };
+
+    // Initial load
+    {
+        let refresh = refresh.clone();
+        use_effect_with((), move |_| {
+            refresh.emit(());
+            || ()
+        });
+    }
+
+    // Auto-refresh every hour
+    {
+        let refresh = refresh.clone();
+        use_interval(
+            move || {
+                refresh.emit(());
+            },
+            3600000, // 1 hour in milliseconds
+        );
+    }
+
+    let context = WeatherContext {
+        data: Rc::new((*state).clone()),
+        refresh,
+    };
+
     html! {
-        <ContextProvider<WeatherContext> context={weather}>
+        <ContextProvider<WeatherContext> context={context}>
             {props.children.clone()}
         </ContextProvider<WeatherContext>>
     }
 }
 
-/// Attempts to fetch weather data from the Environment Canada client with retries.
-#[allow(dead_code)]
-async fn fetch_weather_with_retry(client: &EnvironmentCanadaClient) -> WeatherData {
-    for attempt in 0..MAX_RETRIES {
-        let result = client.fetch_weather().await;
+async fn fetch_weather_with_retry() -> Result<WeatherData, String> {
+    const MAX_ATTEMPTS: u32 = 3;
+    let mut attempts = 0;
+    
+    loop {
+        attempts += 1;
         
-        match result {
-            Ok(data) => {
-                log!(format!("Weather fetch attempt {} succeeded.", attempt + 1));
-                if !data.location.is_empty() {
-                    return data; 
-                } else {
-                    warn!(format!("Attempt {} failed (Data empty or invalid structure).", attempt + 1));
-                }
+        match fetch_weather_data().await {
+            Ok(data) => return Ok(data),
+            Err(e) if attempts < MAX_ATTEMPTS => {
+                let delay_ms = 2u32.pow(attempts) * 1000;
+                log!(&format!(
+                    "Attempt {}/{} failed: {}. Retrying in {}ms...",
+                    attempts, MAX_ATTEMPTS, e, delay_ms
+                ));
+                TimeoutFuture::new(delay_ms).await;
             }
             Err(e) => {
-                warn!(format!("Attempt {} failed (Network/Parse error: {}).", attempt + 1, e));
+                return Err(format!(
+                    "Failed after {} attempts. {}",
+                    MAX_ATTEMPTS, e
+                ));
             }
         }
-        
-        if attempt < MAX_RETRIES - 1 {
-            warn!(format!("Retrying in {}ms...", RETRY_DELAY_MS));
-            sleep(Duration::from_millis(RETRY_DELAY_MS)).await;
-        }
     }
-
-    warn!("Failed to load weather data after all retries. Returning empty data.");
-    WeatherData::default()
 }

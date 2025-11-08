@@ -29,7 +29,7 @@
     
     <script src="https://cdn.jsdelivr.net/npm/echarts@5.4.2/dist/echarts.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/echarts-gl@2.0.9/dist/echarts-gl.min.js"></script>
-<link rel="modulepreload" href="./bindicator-3becb5ef36e9d985.js" crossorigin="anonymous" integrity="sha384-dPlwJpoZyYTrWmh5RWkQHGq+uNIORQiLkz5tIquc73sMmJbZKTMfXVIEQPuTuNRr"><link rel="preload" href="./bindicator-3becb5ef36e9d985_bg.wasm" crossorigin="anonymous" integrity="sha384-qa4pkaS3us7smIsXIzn+9RikZgPRWnRDVZiNMEDYBQC3zMvF6m40uHg9pSgb+oEh" as="fetch" type="application/wasm"></head>
+<link rel="modulepreload" href="./my-bindicator-bf876af4cb573dea.js" crossorigin="anonymous" integrity="sha384-KYnLMmiPxe2NiQOY0SwKGMN438YBz/QwEHIi++cCMpb+f20VjNItzfxntdHAhKLh"><link rel="preload" href="./my-bindicator-bf876af4cb573dea_bg.wasm" crossorigin="anonymous" integrity="sha384-4EZwIljDPZBI/uPba7frLv9sbBv+t/MnYWS2TbEjxMXZtuZBS3au0W+o5ck4qG/5" as="fetch" type="application/wasm"></head>
 <style>
     html,
     body,
@@ -492,8 +492,8 @@
     </script>
 
 <script type="module">
-import init, * as bindings from './bindicator-3becb5ef36e9d985.js';
-const wasm = await init({ module_or_path: './bindicator-3becb5ef36e9d985_bg.wasm' });
+import init, * as bindings from './my-bindicator-bf876af4cb573dea.js';
+const wasm = await init({ module_or_path: './my-bindicator-bf876af4cb573dea_bg.wasm' });
 
 
 window.wasmBindings = bindings;
