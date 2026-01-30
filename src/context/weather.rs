@@ -3,7 +3,6 @@
 use std::rc::Rc;
 use yew::prelude::*;
 use gloo_console::log;
-use gloo_timers::future::TimeoutFuture;
 use serde::{Deserialize, Serialize};
 use yew_hooks::use_interval;
 use crate::weather::api::{WeatherData, fetch_weather_data};
@@ -106,28 +105,6 @@ pub fn weather_provider(props: &WeatherProviderProps) -> Html {
 }
 
 async fn fetch_weather_with_retry() -> Result<WeatherData, String> {
-    const MAX_ATTEMPTS: u32 = 3;
-    let mut attempts = 0;
-    
-    loop {
-        attempts += 1;
-        
-        match fetch_weather_data().await {
-            Ok(data) => return Ok(data),
-            Err(e) if attempts < MAX_ATTEMPTS => {
-                let delay_ms = 2u32.pow(attempts) * 1000;
-                log!(&format!(
-                    "Attempt {}/{} failed: {}. Retrying in {}ms...",
-                    attempts, MAX_ATTEMPTS, e, delay_ms
-                ));
-                TimeoutFuture::new(delay_ms).await;
-            }
-            Err(e) => {
-                return Err(format!(
-                    "Failed after {} attempts. {}",
-                    MAX_ATTEMPTS, e
-                ));
-            }
-        }
-    }
+    // Single attempt - api.rs already has built-in fallback proxies
+    fetch_weather_data().await
 }

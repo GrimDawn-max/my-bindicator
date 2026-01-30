@@ -1,6 +1,11 @@
 use gloo_net::http::Request;
 use gloo_console::log;
+use gloo_timers::future::TimeoutFuture;
+use futures::future::{select, Either};
 use serde::{Deserialize, Serialize};
+
+// Timeout for each fetch attempt in seconds
+const FETCH_TIMEOUT_SECS: u32 = 8;
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct WeatherData {
@@ -126,20 +131,31 @@ pub async fn fetch_weather_data() -> Result<WeatherData, String> {
 }
 
 async fn try_fetch(url: &str) -> Result<WeatherData, String> {
+    // Race the fetch against a timeout
+    let fetch_future = Box::pin(try_fetch_inner(url));
+    let timeout_future = Box::pin(TimeoutFuture::new(FETCH_TIMEOUT_SECS * 1000));
+
+    match select(fetch_future, timeout_future).await {
+        Either::Left((result, _)) => result,
+        Either::Right((_, _)) => Err(format!("Request timed out after {} seconds", FETCH_TIMEOUT_SECS)),
+    }
+}
+
+async fn try_fetch_inner(url: &str) -> Result<WeatherData, String> {
     let response = Request::get(url)
         .send()
         .await
         .map_err(|e| format!("Network error: {:?}", e))?;
-    
+
     if !response.ok() {
         return Err(format!("HTTP {}: {}", response.status(), response.status_text()));
     }
-    
+
     let text = response
         .text()
         .await
         .map_err(|e| format!("Failed to read response: {:?}", e))?;
-    
+
     parse_rss_xml(&text)
 }
 
