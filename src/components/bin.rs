@@ -15,16 +15,18 @@ pub enum BinVariation {
 }
 
 // Yard waste collection season dates - update these each year
+// 2026: March 12 to December 3
 const YARD_WASTE_START_MONTH: u32 = 3;
-const YARD_WASTE_START_DAY: u32 = 20;
+const YARD_WASTE_START_DAY: u32 = 12;
 const YARD_WASTE_END_MONTH: u32 = 12;
-const YARD_WASTE_END_DAY: u32 = 11;
+const YARD_WASTE_END_DAY: u32 = 3;
 
 // Christmas tree collection dates - update these each year
+// 2026: January 6-29
 const CHRISTMAS_TREE_START_MONTH: u32 = 1;
 const CHRISTMAS_TREE_START_DAY: u32 = 6;
 const CHRISTMAS_TREE_END_MONTH: u32 = 1;
-const CHRISTMAS_TREE_END_DAY: u32 = 31;
+const CHRISTMAS_TREE_END_DAY: u32 = 29;
 
 // Check if we're in yard waste season
 pub fn is_yard_waste_season() -> bool {
@@ -59,9 +61,9 @@ pub fn get_alternate_bin() -> BinVariation {
     let wat = diff.num_days() % 14;
 
     if wat != 0 && wat <= 7 {
-        return BinVariation::None; // Will display Blue bin
+        return BinVariation::Yellow; // Will display Black and Brown bins
     }
-    return BinVariation::Yellow; // Will display Black and Brown bins
+    return BinVariation::None; // Will display Blue bin
 }
 
 pub fn get_today() -> DateTime<Local> {
