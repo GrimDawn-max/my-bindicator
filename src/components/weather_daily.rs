@@ -12,26 +12,57 @@ pub struct DailyComponentProps {
     pub high: Option<i32>,
     pub low: Option<i32>,
     pub pop: Option<u32>,
+    pub uv_index: Option<String>,
+    pub wind_chill: Option<String>,
+    pub wind_summary: Option<String>,
 }
 
 #[function_component]
 pub fn DailyComponent(props: &DailyComponentProps) -> Html {
-    // Format temperatures, handling None values
-    let high_display = props.high
-        .map(|h| format!("{}", h))
-        .unwrap_or_else(|| "N/A".to_string());
-    
-    let low_display = props.low
-        .map(|l| format!("{}", l))
-        .unwrap_or_else(|| "N/A".to_string());
-    
-    // Format precipitation probability, handling None values
-    let pop_display = props.pop
-        .map(|p| format!("{}%", p))
-        .unwrap_or_else(|| "N/A".to_string());
-    
+    // Format temperature display based on what's available
+    let temp_display = match (props.high, props.low) {
+        (Some(h), Some(l)) => format!("{}° / {}°C", h, l),
+        (Some(h), None) => format!("High {}°C", h),
+        (None, Some(l)) => format!("Low {}°C", l),
+        (None, None) => "N/A".to_string(),
+    };
+
+    // Use placeholder if summary is empty
+    let summary_display = if props.summary.is_empty() {
+        "\u{00A0}".to_string() // non-breaking space as placeholder
+    } else {
+        props.summary.clone()
+    };
+
+    // Shorten wind chill text if present (e.g., "Wind chill minus 26." -> "WC -26°")
+    let wind_chill_short = props.wind_chill.as_ref().map(|wc| {
+        let wc_lower = wc.to_lowercase();
+        if let Some(pos) = wc_lower.find("minus") {
+            let after = &wc[pos + 5..];
+            for word in after.split_whitespace() {
+                let cleaned = word.trim_matches(|c: char| !c.is_numeric());
+                if let Ok(num) = cleaned.parse::<i32>() {
+                    return format!("WC -{}°", num);
+                }
+            }
+        }
+        if let Some(pos) = wc_lower.find("near") {
+            let after = &wc[pos + 4..];
+            for word in after.split_whitespace() {
+                if word.contains("minus") {
+                    continue;
+                }
+                let cleaned = word.trim_matches(|c: char| !c.is_numeric() && c != '-');
+                if let Ok(num) = cleaned.parse::<i32>() {
+                    return format!("WC {}°", num);
+                }
+            }
+        }
+        "".to_string()
+    }).filter(|s| !s.is_empty());
+
     html! {
-        <div class="card">
+        <div class="card h-100">
             <div class="card-header text-center p-0 text-body">
                 { &props.day_name }
             </div>
@@ -40,18 +71,23 @@ pub fn DailyComponent(props: &DailyComponentProps) -> Html {
                 <div class="display-3">
                     { &props.icon }
                 </div>
-                
+
                 <div class="text-nowrap text-body fw-bold fs-5">
-                    {format!("{} - {} ºC", high_display, low_display)}
+                    { temp_display }
                 </div>
-                
+
                 <div class="text-nowrap text-body fw-bold">
-                    { &props.summary }
+                    { summary_display }
                 </div>
-                
+
                 <div class="text-body fw-bold">
-                    {format!("POP {}", pop_display)}
+                    {format!("POP {}%", props.pop.unwrap_or(0))}
                 </div>
+
+                // Show wind chill if available (useful in winter)
+                if let Some(ref wc) = wind_chill_short {
+                    <div class="text-body text-info">{ wc }</div>
+                }
             </div>
         </div>
     }
@@ -81,6 +117,9 @@ pub fn weather_daily(props: &WeatherDailyProps) -> Html {
                                 high={forecast.high}
                                 low={forecast.low}
                                 pop={forecast.pop}
+                                uv_index={forecast.uv_index.clone()}
+                                wind_chill={forecast.wind_chill.clone()}
+                                wind_summary={forecast.wind_summary.clone()}
                             />
                         </div>
                     }

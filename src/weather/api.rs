@@ -4,18 +4,23 @@ use gloo_timers::future::TimeoutFuture;
 use futures::future::{select, Either};
 use serde::{Deserialize, Serialize};
 
-// Timeout for each fetch attempt in seconds
-const FETCH_TIMEOUT_SECS: u32 = 8;
+// Timeout for fetch in seconds
+const FETCH_TIMEOUT_SECS: u32 = 10;
+
+// Environment Canada GeoMet API - free, no auth, CORS enabled
+const WEATHER_API_URL: &str = "https://api.weather.gc.ca/collections/citypageweather-realtime/items?f=json&identifier=on-143";
+const AQHI_API_URL: &str = "https://api.weather.gc.ca/collections/aqhi-observations-realtime/items?f=json&location_id=FCWYG&sortby=-observation_datetime&limit=1";
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct WeatherData {
     pub current: CurrentConditions,
     pub hourly: Vec<HourlyForecast>,
     pub daily: Vec<DailyForecast>,
+    pub warnings: Vec<WeatherWarning>,
+    pub sun: Option<SunTimes>,
 }
 
 impl WeatherData {
-    /// Get forecast for a specific day name (e.g., "Monday", "Tuesday")
     pub fn get_forecast_for_day(&self, day_name: &str) -> Option<&DailyForecast> {
         self.daily.iter().find(|forecast| {
             forecast.day_name.eq_ignore_ascii_case(day_name)
@@ -31,16 +36,33 @@ pub struct CurrentConditions {
     pub humidity: u32,
     pub wind_speed: u32,
     pub wind_direction: String,
+    pub wind_gust: Option<u32>,
+    pub wind_chill: Option<i32>,
     pub pressure: f32,
-    pub visibility: f32,
+    pub pressure_tendency: Option<String>,
     pub dewpoint: f32,
+    pub visibility: Option<f32>,
+    pub station: String,
     pub air_quality: Option<AirQuality>,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct AirQuality {
-    pub index: u32,
+    pub index: f32,
     pub category: String,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct WeatherWarning {
+    pub description: String,
+    pub alert_level: String,
+    pub url: String,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct SunTimes {
+    pub sunrise: String,
+    pub sunset: String,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -50,6 +72,9 @@ pub struct HourlyForecast {
     pub condition: String,
     pub pop: u32,
     pub icon: String,
+    pub wind_speed: u32,
+    pub wind_direction: String,
+    pub wind_chill: Option<i32>,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -60,6 +85,9 @@ pub struct DailyForecast {
     pub summary: String,
     pub pop: Option<u32>,
     pub icon: String,
+    pub uv_index: Option<String>,
+    pub wind_chill: Option<String>,
+    pub wind_summary: Option<String>,
 }
 
 impl DailyForecast {
@@ -73,7 +101,7 @@ impl DailyForecast {
             "☁️".to_string()
         } else if condition_lower.contains("rain") || condition_lower.contains("shower") {
             "🌧️".to_string()
-        } else if condition_lower.contains("snow") {
+        } else if condition_lower.contains("snow") || condition_lower.contains("flurr") {
             "❄️".to_string()
         } else if condition_lower.contains("thunder") || condition_lower.contains("storm") {
             "⛈️".to_string()
@@ -85,54 +113,11 @@ impl DailyForecast {
     }
 }
 
-// Multiple CORS proxy options for reliability
-const CORS_PROXIES: &[&str] = &[
-    "https://corsproxy.io/?",
-    "https://api.allorigins.win/raw?url=",
-];
-
-// Toronto RSS feed
-const WEATHER_URL: &str = "https://weather.gc.ca/rss/city/on-143_e.xml";
-
 pub async fn fetch_weather_data() -> Result<WeatherData, String> {
-    // Try direct fetch first
-    log!("Attempting direct fetch from Environment Canada RSS...");
-    match try_fetch(WEATHER_URL).await {
-        Ok(data) => {
-            log!("✓ Direct fetch succeeded");
-            return Ok(data);
-        }
-        Err(e) => {
-            let msg = format!("✗ Direct fetch failed: {}. Trying CORS proxies...", e);
-            log!(&msg);
-        }
-    }
-    
-    // Try each CORS proxy in sequence
-    for (i, proxy) in CORS_PROXIES.iter().enumerate() {
-        let proxied_url = format!("{}{}", proxy, WEATHER_URL);
-        let msg = format!("Attempting proxy {}/{}: {}", i + 1, CORS_PROXIES.len(), *proxy);
-        log!(&msg);
-        
-        match try_fetch(&proxied_url).await {
-            Ok(data) => {
-                let msg = format!("✓ Success with proxy: {}", *proxy);
-                log!(&msg);
-                return Ok(data);
-            }
-            Err(e) => {
-                let msg = format!("✗ Proxy {} failed: {}", *proxy, e);
-                log!(&msg);
-            }
-        }
-    }
-    
-    Err("Unable to load weather data from any source. Please check your internet connection.".to_string())
-}
+    log!("Fetching weather from Environment Canada GeoMet API...");
 
-async fn try_fetch(url: &str) -> Result<WeatherData, String> {
     // Race the fetch against a timeout
-    let fetch_future = Box::pin(try_fetch_inner(url));
+    let fetch_future = Box::pin(fetch_and_parse());
     let timeout_future = Box::pin(TimeoutFuture::new(FETCH_TIMEOUT_SECS * 1000));
 
     match select(fetch_future, timeout_future).await {
@@ -141,8 +126,9 @@ async fn try_fetch(url: &str) -> Result<WeatherData, String> {
     }
 }
 
-async fn try_fetch_inner(url: &str) -> Result<WeatherData, String> {
-    let response = Request::get(url)
+async fn fetch_and_parse() -> Result<WeatherData, String> {
+    // Fetch main weather data
+    let response = Request::get(WEATHER_API_URL)
         .send()
         .await
         .map_err(|e| format!("Network error: {:?}", e))?;
@@ -156,343 +142,487 @@ async fn try_fetch_inner(url: &str) -> Result<WeatherData, String> {
         .await
         .map_err(|e| format!("Failed to read response: {:?}", e))?;
 
-    parse_rss_xml(&text)
+    let mut weather_data = parse_api_response(&text)?;
+
+    // Try to fetch AQHI data (don't fail if unavailable)
+    if let Ok(aqhi) = fetch_aqhi().await {
+        weather_data.current.air_quality = Some(aqhi);
+    }
+
+    Ok(weather_data)
 }
 
-fn parse_rss_xml(xml: &str) -> Result<WeatherData, String> {
-    use quick_xml::Reader;
-    use quick_xml::events::Event;
-    
-    let mut reader = Reader::from_str(xml);
-    reader.config_mut().trim_text(true);
-    
-    let mut current = CurrentConditions {
-        temperature: 0.0,
-        condition: String::new(),
-        icon: String::new(),
-        humidity: 0,
-        wind_speed: 0,
-        wind_direction: String::new(),
-        pressure: 0.0,
-        visibility: 0.0,
-        dewpoint: 0.0,
-        air_quality: None,
-    };
-    
-    let mut forecasts = Vec::new();
-    let mut buf = Vec::new();
-    let mut current_element = String::new();
-    let mut in_item = false;
-    let mut current_title = String::new();
-    let mut current_summary = String::new();
-    
-    loop {
-        match reader.read_event_into(&mut buf) {
-            Ok(Event::Start(ref e)) => {
-                current_element = String::from_utf8_lossy(e.name().as_ref()).to_string();
-                if current_element == "entry" {
-                    in_item = true;
-                    current_title.clear();
-                    current_summary.clear();
-                }
-            }
-            Ok(Event::End(ref e)) => {
-                let element = String::from_utf8_lossy(e.name().as_ref()).to_string();
-                if element == "entry" && in_item {
-                    in_item = false;
-                    // Process the item
-                    if current_title.contains("Current Conditions") {
-                        // Parse current conditions
-                        log!(&format!("🌡️ Parsing current conditions from summary (length: {})", current_summary.len()));
-                        parse_current_conditions(&current_title, &current_summary, &mut current);
-                    } else if !current_title.is_empty() {
-                        // Parse forecast
-                        if let Some(forecast) = parse_forecast_item(&current_title, &current_summary) {
-                            forecasts.push(forecast);
-                        }
-                    }
-                }
-            }
-            Ok(Event::Text(e)) => {
-                if !in_item {
-                    buf.clear();
-                    continue;
-                }
-                
-                let text = e.unescape().unwrap_or_default().trim().to_string();
-                if text.is_empty() {
-                    buf.clear();
-                    continue;
-                }
-                
-                match current_element.as_str() {
-                    "title" => {
-                        current_title = text;
-                    }
-                    "summary" => {
-                        current_summary = text;
-                    }
-                    _ => {}
-                }
-            }
-            // CRITICAL: Handle CDATA blocks (where current conditions details are stored!)
-            Ok(Event::CData(e)) => {
-                if !in_item {
-                    buf.clear();
-                    continue;
-                }
-                
-                // CDATA content doesn't need unescaping - it's already raw
-                let text = String::from_utf8_lossy(e.as_ref()).trim().to_string();
-                
-                if current_element == "summary" {
-                    current_summary = text;
-                }
-            }
-            Ok(Event::Eof) => break,
-            Err(e) => return Err(format!("XML parse error: {:?}", e)),
-            _ => {}
-        }
-        buf.clear();
+async fn fetch_aqhi() -> Result<AirQuality, String> {
+    let response = Request::get(AQHI_API_URL)
+        .send()
+        .await
+        .map_err(|e| format!("AQHI network error: {:?}", e))?;
+
+    if !response.ok() {
+        return Err("AQHI fetch failed".to_string());
     }
-    
-    log!(&format!("📊 Parsed {} forecast items total", forecasts.len()));
-    
-    // Separate into hourly and daily
-    let (hourly, daily) = separate_forecasts(forecasts);
-    
-    log!(&format!("📊 Created {} hourly, {} daily forecasts", hourly.len(), daily.len()));
-    log!(&format!("🌡️ Current conditions: {}°C, {}% humidity, {} km/h wind", 
-        current.temperature, current.humidity, current.wind_speed));
-    
+
+    let text = response
+        .text()
+        .await
+        .map_err(|e| format!("AQHI read error: {:?}", e))?;
+
+    let json: serde_json::Value = serde_json::from_str(&text)
+        .map_err(|e| format!("AQHI JSON error: {:?}", e))?;
+
+    let aqhi_value = json.get("features")
+        .and_then(|f| f.as_array())
+        .and_then(|arr| arr.first())
+        .and_then(|f| f.get("properties"))
+        .and_then(|p| p.get("aqhi"))
+        .and_then(|v| v.as_f64())
+        .ok_or("No AQHI value found")?;
+
+    let index = aqhi_value as f32;
+    let category = match index.round() as u32 {
+        1..=3 => "Low Risk",
+        4..=6 => "Moderate Risk",
+        7..=10 => "High Risk",
+        _ => "Very High Risk",
+    }.to_string();
+
+    Ok(AirQuality { index, category })
+}
+
+fn parse_api_response(json_str: &str) -> Result<WeatherData, String> {
+    let json: serde_json::Value = serde_json::from_str(json_str)
+        .map_err(|e| format!("JSON parse error: {:?}", e))?;
+
+    let features = json.get("features")
+        .and_then(|f| f.as_array())
+        .ok_or("No features array in response")?;
+
+    let props = features.first()
+        .and_then(|f| f.get("properties"))
+        .ok_or("No properties in feature")?;
+
+    // Parse current conditions
+    let current = parse_current_conditions(props)?;
+
+    // Parse forecasts
+    let (hourly, daily) = parse_forecasts(props);
+
+    // Parse warnings
+    let warnings = parse_warnings(props);
+
+    // Parse sunrise/sunset
+    let sun = parse_sun_times(props);
+
+    log!(&format!("✓ Weather loaded: {}°C, {}", current.temperature, current.condition));
+
     Ok(WeatherData {
         current,
         hourly,
         daily,
+        warnings,
+        sun,
     })
 }
 
-fn parse_current_conditions(title: &str, summary: &str, current: &mut CurrentConditions) {
-    // Title format: "Current Conditions: Mostly Cloudy, 10.4°C"
-    if let Some(after_colon) = title.split(':').nth(1) {
-        let parts: Vec<&str> = after_colon.split(',').collect();
-        if parts.len() >= 2 {
-            current.condition = parts[0].trim().to_string();
-            current.icon = get_weather_icon(&current.condition);
-            
-            // Parse temperature from title
-            if let Some(temp_str) = parts[1].trim().strip_suffix("°C") {
-                current.temperature = temp_str.trim().parse().unwrap_or(0.0);
-            }
-        }
-    }
-    
-    // Parse HTML summary for detailed conditions
-    // Format: <b>Temperature:</b> 10.4&deg;C<br/> <b>Humidity:</b> 83 %<br/> ...
-    
-    for line in summary.split("<br/>") {
-        let line = line.trim();
-        
-        // Extract value after the bold tag
-        if let Some(value_part) = line.split("</b>").nth(1) {
-            let value = value_part.trim();
-            
-            if line.contains("Temperature:") {
-                if let Some(temp_str) = value.split("&deg;C").next() {
-                    current.temperature = temp_str.trim().parse().unwrap_or(current.temperature);
-                }
-            } else if line.contains("Humidity:") {
-                if let Some(num_str) = value.split('%').next() {
-                    current.humidity = num_str.trim().parse().unwrap_or(0);
-                }
-            } else if line.contains("Pressure") {
-                // Format: "99.8 kPa rising"
-                if let Some(num_str) = value.split_whitespace().next() {
-                    current.pressure = num_str.parse().unwrap_or(0.0);
-                }
-            } else if line.contains("Visibility:") {
-                if let Some(num_str) = value.split_whitespace().next() {
-                    current.visibility = num_str.parse().unwrap_or(0.0);
-                }
-            } else if line.contains("Dewpoint:") {
-                if let Some(temp_str) = value.split("&deg;C").next() {
-                    current.dewpoint = temp_str.trim().parse().unwrap_or(0.0);
-                }
-            } else if line.contains("Wind:") {
-                // Format: "WSW 17 km/h gust 28 km/h"
-                let parts: Vec<&str> = value.split_whitespace().collect();
-                if parts.len() >= 3 {
-                    current.wind_direction = parts[0].to_string();
-                    current.wind_speed = parts[1].parse().unwrap_or(0);
-                }
-            } else if line.contains("Air Quality Health Index:") {
-                if let Some(index_str) = value.split_whitespace().next() {
-                    if let Ok(index) = index_str.parse::<u32>() {
-                        let category = match index {
-                            1..=3 => "Low",
-                            4..=6 => "Moderate",
-                            7..=10 => "High",
-                            _ => "Very High",
-                        };
-                        current.air_quality = Some(AirQuality {
-                            index,
-                            category: category.to_string(),
-                        });
-                    }
-                }
-            }
-        }
-    }
-}
+fn parse_current_conditions(props: &serde_json::Value) -> Result<CurrentConditions, String> {
+    let cc = props.get("currentConditions")
+        .ok_or("No currentConditions in response")?;
 
-fn parse_forecast_item(title: &str, summary: &str) -> Option<HourlyForecast> {
-    // Skip special items
-    if title.contains("SPECIAL WEATHER") || title.contains("Notice") {
-        return None;
-    }
-    
-    let parts: Vec<&str> = title.split(':').collect();
-    if parts.len() < 2 {
-        return None;
-    }
-    
-    let period = parts[0].trim().to_string();
-    let condition_part = parts[1].trim();
-    
-    // Extract condition (first sentence before period)
-    let condition = condition_part
-        .split('.')
-        .next()
-        .unwrap_or(condition_part)
-        .trim()
+    let temperature = cc.get("temperature")
+        .and_then(|t| t.get("value"))
+        .and_then(|v| v.get("en"))
+        .and_then(|v| v.as_f64())
+        .unwrap_or(0.0) as f32;
+
+    let condition = cc.get("condition")
+        .and_then(|c| c.get("en"))
+        .and_then(|v| v.as_str())
+        .unwrap_or("Unknown")
         .to_string();
-    
-    // Extract temperature
-    let temp = if let Some(high) = extract_number(title, "High") {
-        high as i32
-    } else if let Some(low) = extract_number(title, "Low") {
-        low as i32
-    } else {
-        0
-    };
-    
-    // Extract POP from title or summary
-    let pop = extract_pop(title).max(extract_pop(summary));
-    
-    Some(HourlyForecast {
-        time: period,
-        temperature: temp,
-        condition: condition.clone(),
-        pop,
-        icon: get_weather_icon(&condition),
+
+    let humidity = cc.get("relativeHumidity")
+        .and_then(|h| h.get("value"))
+        .and_then(|v| v.get("en"))
+        .and_then(|v| v.as_u64())
+        .unwrap_or(0) as u32;
+
+    let wind_speed = cc.get("wind")
+        .and_then(|w| w.get("speed"))
+        .and_then(|s| s.get("value"))
+        .and_then(|v| v.get("en"))
+        .and_then(|v| v.as_u64())
+        .unwrap_or(0) as u32;
+
+    let wind_direction = cc.get("wind")
+        .and_then(|w| w.get("direction"))
+        .and_then(|d| d.get("value"))
+        .and_then(|v| v.get("en"))
+        .and_then(|v| v.as_str())
+        .unwrap_or("")
+        .to_string();
+
+    let wind_gust = cc.get("wind")
+        .and_then(|w| w.get("gust"))
+        .and_then(|g| g.get("value"))
+        .and_then(|v| v.get("en"))
+        .and_then(|v| v.as_u64())
+        .map(|v| v as u32)
+        .filter(|&v| v > 0);
+
+    let wind_chill = cc.get("windChill")
+        .and_then(|w| w.get("value"))
+        .and_then(|v| v.get("en"))
+        .and_then(|v| v.as_i64())
+        .map(|v| v as i32);
+
+    let pressure = cc.get("pressure")
+        .and_then(|p| p.get("value"))
+        .and_then(|v| v.get("en"))
+        .and_then(|v| v.as_f64())
+        .unwrap_or(0.0) as f32;
+
+    let pressure_tendency = cc.get("pressure")
+        .and_then(|p| p.get("tendency"))
+        .and_then(|t| t.get("en"))
+        .and_then(|v| v.as_str())
+        .map(|s| s.to_string());
+
+    if let Some(ref t) = pressure_tendency {
+        log!(&format!("Pressure tendency from API: '{}'", t));
+    }
+
+    let dewpoint = cc.get("dewpoint")
+        .and_then(|d| d.get("value"))
+        .and_then(|v| v.get("en"))
+        .and_then(|v| v.as_f64())
+        .unwrap_or(0.0) as f32;
+
+    let visibility = cc.get("visibility")
+        .and_then(|v| v.get("value"))
+        .and_then(|v| v.get("en"))
+        .and_then(|v| v.as_f64())
+        .map(|v| v as f32);
+
+    let station = cc.get("station")
+        .and_then(|s| s.get("value"))
+        .and_then(|v| v.get("en"))
+        .and_then(|v| v.as_str())
+        .unwrap_or("")
+        .to_string();
+
+    let icon = get_weather_icon(&condition);
+
+    Ok(CurrentConditions {
+        temperature,
+        condition,
+        icon,
+        humidity,
+        wind_speed,
+        wind_direction,
+        wind_gust,
+        wind_chill,
+        pressure,
+        pressure_tendency,
+        dewpoint,
+        visibility,
+        station,
+        air_quality: None,
     })
 }
 
-fn separate_forecasts(forecasts: Vec<HourlyForecast>) -> (Vec<HourlyForecast>, Vec<DailyForecast>) {
+fn parse_warnings(props: &serde_json::Value) -> Vec<WeatherWarning> {
+    let mut warnings = Vec::new();
+
+    if let Some(warning_array) = props.get("warnings").and_then(|w| w.as_array()) {
+        for w in warning_array {
+            let description = w.get("description")
+                .and_then(|d| d.get("en"))
+                .and_then(|v| v.as_str())
+                .unwrap_or("")
+                .to_string();
+
+            let alert_level = w.get("alertColourLevel")
+                .and_then(|a| a.get("en"))
+                .and_then(|v| v.as_str())
+                .unwrap_or("unknown")
+                .to_string();
+
+            let url = w.get("url")
+                .and_then(|u| u.get("en"))
+                .and_then(|v| v.as_str())
+                .unwrap_or("")
+                .to_string();
+
+            if !description.is_empty() {
+                warnings.push(WeatherWarning {
+                    description,
+                    alert_level,
+                    url,
+                });
+            }
+        }
+    }
+
+    warnings
+}
+
+fn parse_sun_times(props: &serde_json::Value) -> Option<SunTimes> {
+    let rise_set = props.get("riseSet")?;
+
+    let sunrise_utc = rise_set.get("sunrise")
+        .and_then(|s| s.get("en"))
+        .and_then(|v| v.as_str())?;
+
+    let sunset_utc = rise_set.get("sunset")
+        .and_then(|s| s.get("en"))
+        .and_then(|v| v.as_str())?;
+
+    // Convert UTC to local time display (just extract time part for now)
+    let sunrise = format_utc_to_local_time(sunrise_utc);
+    let sunset = format_utc_to_local_time(sunset_utc);
+
+    Some(SunTimes { sunrise, sunset })
+}
+
+fn format_utc_to_local_time(utc_str: &str) -> String {
+    // UTC format: "2026-01-30T12:37:00Z"
+    // Toronto is UTC-5, so subtract 5 hours
+    if let Some(time_part) = utc_str.split('T').nth(1) {
+        if let Some(hour_str) = time_part.split(':').next() {
+            if let Ok(hour) = hour_str.parse::<i32>() {
+                let local_hour = (hour - 5 + 24) % 24;
+                let minute = time_part.split(':').nth(1).unwrap_or("00");
+                let am_pm = if local_hour < 12 { "AM" } else { "PM" };
+                let display_hour = if local_hour == 0 { 12 } else if local_hour > 12 { local_hour - 12 } else { local_hour };
+                return format!("{}:{} {}", display_hour, minute, am_pm);
+            }
+        }
+    }
+    utc_str.to_string()
+}
+
+fn parse_forecasts(props: &serde_json::Value) -> (Vec<HourlyForecast>, Vec<DailyForecast>) {
     let mut hourly = Vec::new();
     let mut daily = Vec::new();
-    let mut current_day: Option<(String, Option<i32>, Option<i32>, String, Option<u32>)> = None;
-    
-    for forecast in forecasts {
-        let period_name = &forecast.time;
-        let is_night = period_name.to_lowercase().contains("night");
-        
-        // Extract day name
-        let day_name = period_name
-            .split_whitespace()
-            .next()
-            .unwrap_or(period_name)
-            .to_string();
-        
-        // Add to hourly (all forecasts)
-        hourly.push(forecast.clone());
-        
-        // Build daily forecasts
-        let temp = Some(forecast.temperature);
-        let pop = if forecast.pop > 0 { Some(forecast.pop) } else { None };
-        
-        if !is_night {
-            // Day forecast - save as high
-            current_day = Some((day_name, temp, None, forecast.condition.clone(), pop));
-        } else {
-            // Night forecast
-            if let Some((name, day_high, _, day_condition, day_pop)) = current_day.take() {
-                // Combine day and night
-                let icon = DailyForecast::get_emoji(&day_condition);
-                daily.push(DailyForecast {
-                    day_name: name,
-                    high: day_high,
-                    low: temp,
-                    summary: day_condition,
-                    pop: day_pop.or(pop),
-                    icon,
-                });
-            } else {
-                // Night only
-                let icon = DailyForecast::get_emoji(&forecast.condition);
-                daily.push(DailyForecast {
-                    day_name,
-                    high: None,
-                    low: temp,
-                    summary: forecast.condition.clone(),
+
+    // Parse hourly forecasts
+    if let Some(hfg) = props.get("hourlyForecastGroup") {
+        if let Some(forecasts) = hfg.get("hourlyForecasts").and_then(|f| f.as_array()) {
+            for fc in forecasts.iter().take(24) {
+                let timestamp = fc.get("timestamp")
+                    .and_then(|t| t.as_str())
+                    .unwrap_or("");
+
+                // Extract hour from timestamp for display
+                let time = format_utc_to_local_time(timestamp);
+
+                let temperature = fc.get("temperature")
+                    .and_then(|t| t.get("value"))
+                    .and_then(|v| v.get("en"))
+                    .and_then(|v| v.as_i64())
+                    .unwrap_or(0) as i32;
+
+                let condition = fc.get("condition")
+                    .and_then(|c| c.get("en"))
+                    .and_then(|v| v.as_str())
+                    .unwrap_or("")
+                    .to_string();
+
+                let pop = fc.get("lop")
+                    .and_then(|l| l.get("value"))
+                    .and_then(|v| v.get("en"))
+                    .and_then(|v| v.as_u64())
+                    .unwrap_or(0) as u32;
+
+                let wind_speed = fc.get("wind")
+                    .and_then(|w| w.get("speed"))
+                    .and_then(|s| s.get("value"))
+                    .and_then(|v| v.get("en"))
+                    .and_then(|v| v.as_u64())
+                    .unwrap_or(0) as u32;
+
+                let wind_direction = fc.get("wind")
+                    .and_then(|w| w.get("direction"))
+                    .and_then(|d| d.get("en"))
+                    .and_then(|v| v.as_str())
+                    .unwrap_or("")
+                    .to_string();
+
+                let wind_chill = fc.get("windChill")
+                    .and_then(|w| w.get("value"))
+                    .and_then(|v| v.get("en"))
+                    .and_then(|v| v.as_i64())
+                    .map(|v| v as i32);
+
+                let icon = DailyForecast::get_emoji(&condition);
+
+                hourly.push(HourlyForecast {
+                    time,
+                    temperature,
+                    condition,
                     pop,
                     icon,
+                    wind_speed,
+                    wind_direction,
+                    wind_chill,
                 });
             }
         }
     }
-    
-    // Add remaining day forecast if any
-    if let Some((name, high, low, condition, pop)) = current_day {
-        let icon = DailyForecast::get_emoji(&condition);
-        daily.push(DailyForecast {
-            day_name: name,
-            high,
-            low,
-            summary: condition,
-            pop,
-            icon,
-        });
-    }
-    
-    (hourly, daily.into_iter().take(7).collect())
-}
 
-fn extract_number(text: &str, keyword: &str) -> Option<f32> {
-    let text_lower = text.to_lowercase();
-    let keyword_lower = keyword.to_lowercase();
-    
-    if let Some(pos) = text_lower.find(&keyword_lower) {
-        let after = &text[pos + keyword.len()..];
-        // Handle "plus" or "minus" modifiers
-        let words: Vec<&str> = after.split_whitespace().collect();
-        
-        for (i, word) in words.iter().enumerate() {
-            if word.to_lowercase() == "plus" || word.to_lowercase() == "minus" {
-                // Next word should be the number
-                if i + 1 < words.len() {
-                    if let Ok(num) = words[i + 1].trim_matches(|c: char| !c.is_numeric() && c != '.').parse::<f32>() {
-                        return Some(if *word == "minus" { -num } else { num });
+    // Parse daily forecasts from forecastGroup
+    if let Some(fg) = props.get("forecastGroup") {
+        if let Some(forecasts) = fg.get("forecasts").and_then(|f| f.as_array()) {
+            let mut day_forecasts: std::collections::HashMap<String, (Option<i32>, Option<i32>, String, Option<u32>, Option<String>, Option<String>, Option<String>)> = std::collections::HashMap::new();
+
+            for fc in forecasts {
+                let period = fc.get("period")
+                    .and_then(|p| p.get("value"))
+                    .and_then(|v| v.get("en"))
+                    .and_then(|v| v.as_str())
+                    .unwrap_or("");
+
+                let summary = fc.get("abbreviatedForecast")
+                    .and_then(|a| a.get("textSummary"))
+                    .and_then(|t| t.get("en"))
+                    .and_then(|v| v.as_str())
+                    .unwrap_or("")
+                    .to_string();
+
+                // Get temperature
+                let temp_info = fc.get("temperatures")
+                    .and_then(|t| t.get("temperature"))
+                    .and_then(|t| t.as_array())
+                    .and_then(|arr| arr.first());
+
+                let temp = temp_info
+                    .and_then(|t| t.get("value"))
+                    .and_then(|v| v.get("en"))
+                    .and_then(|v| v.as_i64())
+                    .map(|v| v as i32);
+
+                let temp_class = temp_info
+                    .and_then(|t| t.get("class"))
+                    .and_then(|c| c.get("en"))
+                    .and_then(|v| v.as_str())
+                    .unwrap_or("");
+
+                // Extract POP from text
+                let text_summary = fc.get("textSummary")
+                    .and_then(|t| t.get("en"))
+                    .and_then(|v| v.as_str())
+                    .unwrap_or("");
+                let pop = extract_pop(text_summary);
+
+                // UV index
+                let uv_index = fc.get("uv")
+                    .and_then(|u| u.get("textSummary"))
+                    .and_then(|t| t.get("en"))
+                    .and_then(|v| v.as_str())
+                    .map(|s| s.to_string());
+
+                // Wind chill
+                let wind_chill = fc.get("windChill")
+                    .and_then(|w| w.get("textSummary"))
+                    .and_then(|t| t.get("en"))
+                    .and_then(|v| v.as_str())
+                    .map(|s| s.to_string());
+
+                // Wind summary
+                let wind_summary = fc.get("winds")
+                    .and_then(|w| w.get("textSummary"))
+                    .and_then(|t| t.get("en"))
+                    .and_then(|v| v.as_str())
+                    .map(|s| s.to_string());
+
+                // Build daily forecasts by combining day/night
+                let is_night = period.to_lowercase().contains("night") ||
+                               period.to_lowercase().contains("tonight");
+
+                let day_name = if is_night {
+                    period.replace(" night", "").replace("tonight", "Friday")
+                } else {
+                    period.to_string()
+                };
+
+                let entry = day_forecasts.entry(day_name.clone()).or_insert((None, None, String::new(), None, None, None, None));
+
+                if temp_class == "high" || !is_night {
+                    entry.0 = temp; // high
+                    if entry.2.is_empty() {
+                        entry.2 = summary;
                     }
+                    // Prefer daytime UV/wind info
+                    if uv_index.is_some() {
+                        entry.4 = uv_index;
+                    }
+                    if wind_summary.is_some() {
+                        entry.6 = wind_summary;
+                    }
+                } else {
+                    entry.1 = temp; // low
                 }
-            } else {
-                let cleaned = word.trim_matches(|c: char| !c.is_numeric() && c != '-' && c != '.');
-                if let Ok(num) = cleaned.parse::<f32>() {
-                    return Some(num);
+                if pop > 0 && entry.3.unwrap_or(0) < pop {
+                    entry.3 = Some(pop);
+                }
+                // Wind chill from either day or night
+                if wind_chill.is_some() && entry.5.is_none() {
+                    entry.5 = wind_chill;
+                }
+            }
+
+            // Convert to daily forecasts (preserve order)
+            let mut seen_days = std::collections::HashSet::new();
+            for fc in forecasts {
+                let period = fc.get("period")
+                    .and_then(|p| p.get("value"))
+                    .and_then(|v| v.get("en"))
+                    .and_then(|v| v.as_str())
+                    .unwrap_or("");
+
+                let is_night = period.to_lowercase().contains("night") ||
+                               period.to_lowercase().contains("tonight");
+                let day_name = if is_night {
+                    period.replace(" night", "").replace("tonight", "Friday")
+                } else {
+                    period.to_string()
+                };
+
+                if seen_days.contains(&day_name) {
+                    continue;
+                }
+                seen_days.insert(day_name.clone());
+
+                if let Some((high, low, summary, pop, uv_index, wind_chill, wind_summary)) = day_forecasts.get(&day_name) {
+                    let icon = DailyForecast::get_emoji(summary);
+                    daily.push(DailyForecast {
+                        day_name,
+                        high: *high,
+                        low: *low,
+                        summary: summary.clone(),
+                        pop: *pop,
+                        icon,
+                        uv_index: uv_index.clone(),
+                        wind_chill: wind_chill.clone(),
+                        wind_summary: wind_summary.clone(),
+                    });
                 }
             }
         }
     }
-    None
+
+    // Limit to 7 days
+    daily.truncate(7);
+
+    (hourly, daily)
 }
 
 fn extract_pop(text: &str) -> u32 {
-    // Look for "POP XX%"
-    if let Some(pos) = text.find("POP") {
-        let after = &text[pos + 3..];
-        for word in after.split_whitespace() {
-            let cleaned = word.trim_matches(|c: char| !c.is_numeric());
-            if let Ok(num) = cleaned.parse::<u32>() {
+    let text_lower = text.to_lowercase();
+    if let Some(pos) = text_lower.find("percent") {
+        let before = &text[..pos];
+        for word in before.split_whitespace().rev() {
+            if let Ok(num) = word.parse::<u32>() {
                 return num;
             }
         }

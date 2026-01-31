@@ -113,8 +113,9 @@
     /* Default desktop sizing for bin icons */
     .bin-icon {
         height: 80px !important;
-        width: auto !important;
+        width: 60px !important;
         max-height: 80px !important;
+        max-width: 60px !important;
     }
 
     /* Desktop/tablet - default styling */
@@ -164,8 +165,9 @@
         img[alt*="Bin"], img[alt*="Tree"], img[alt*="Yard"], img[src*="Bin"], img[src*="Yard"], img[src*="tree"],
         .bin-icon {
             height: 30px !important;
-            width: auto !important;
+            width: 25px !important;
             max-height: 30px !important;
+            max-width: 25px !important;
             object-fit: contain !important;
             margin-right: 3px !important;
         }
@@ -256,8 +258,9 @@
         img[alt*="Bin"], img[alt*="Tree"], img[alt*="Yard"], img[src*="Bin"], img[src*="Yard"], img[src*="tree"],
         .bin-icon {
             height: 35px !important;
-            width: auto !important;
+            width: 28px !important;
             max-height: 35px !important;
+            max-width: 28px !important;
             object-fit: contain !important;
             margin-right: 3px !important;
         }
@@ -611,6 +614,20 @@
     [data-bs-theme="dark"] .small,
     [data-bs-theme="dark"] small {
         color: #adb5bd !important;
+    }
+
+    /* Pressure trend arrows - override dark mode */
+    [data-bs-theme="dark"] .pressure-rising,
+    .pressure-rising {
+        color: #22c55e !important;
+    }
+    [data-bs-theme="dark"] .pressure-falling,
+    .pressure-falling {
+        color: #ef4444 !important;
+    }
+    [data-bs-theme="dark"] .pressure-steady,
+    .pressure-steady {
+        color: #9ca3af !important;
     }
 
 </style>
